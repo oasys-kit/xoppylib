@@ -208,9 +208,9 @@ def xoppy_calc_wigg(FIELD=0,NPERIODS=12,ULAMBDA=0.125,K=14.0,ENERGY=6.04,PHOT_EN
     if FIELD == 2:
         # magnetic field from harmonics
         # hh = srfunc.wiggler_harmonics(b_t,Nh=41,fileOutH="tmp.h")
-        t0,p = srfunc.wiggler_trajectory(b_from=2, nPer=NPERIODS, nTrajPoints=NTRAJPOINTS, \
+        t0, p = srfunc.wiggler_trajectory(b_from=2, nPer=NPERIODS, nTrajPoints=NTRAJPOINTS, \
                                          ener_gev=ENERGY, per=ULAMBDA, inData="", trajFile=outFileTraj)
-    print(p)
+
     #
     # now spectra
     #
@@ -225,6 +225,67 @@ def xoppy_calc_wigg(FIELD=0,NPERIODS=12,ULAMBDA=0.125,K=14.0,ENERGY=6.04,PHOT_EN
     print("\nPower from integral of spectrum (sum rule): %8.3f W" % (cumulated_power[-1]))
     return e, f0, p0 , cumulated_power, t0, p
 
+# --------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
+
+def xoppy_calc_wiggler_on_aperture(FIELD=0,
+                                   NPERIODS=12,
+                                   ULAMBDA=0.125,
+                                   K=14.0,
+                                   ENERGY=6.04,
+                                   PHOT_ENERGY_MIN=100.0,
+                                   PHOT_ENERGY_MAX=100100.0, NPOINTS=100, NTRAJPOINTS=101, CURRENT=200.0, FILE="?",
+                                   SLIT_FLAG=0,
+                                   SLIT_D=30.0,
+                                   SLIT_NY=100,
+                                   SLIT_XMIN_MM=-1.0,
+                                   SLIT_XMAX_MM=+1.0,
+                                   SLIT_YMIN_MM=-1.0,
+                                   SLIT_YMAX_MM=+1.0,
+                                   ):
+
+    print("Inside xoppy_calc_wiggler_on_aperture. ")
+
+    outFileTraj = "xwiggler_traj.spec"
+    outFile = "xwiggler.spec"
+
+    if FIELD == 0:
+        t0,p = srfunc.wiggler_trajectory(b_from=0, nPer=NPERIODS, nTrajPoints=NTRAJPOINTS, \
+                                         ener_gev=ENERGY, per=ULAMBDA, kValue=K, \
+                                         trajFile=outFileTraj)
+    if FIELD == 1:
+        # magnetic field from B(s) map
+        t0,p = srfunc.wiggler_trajectory(b_from=1, nPer=NPERIODS, nTrajPoints=NTRAJPOINTS, \
+                                         ener_gev=ENERGY, inData=FILE, trajFile=outFileTraj)
+    if FIELD == 2:
+        # magnetic field from harmonics
+        # hh = srfunc.wiggler_harmonics(b_t,Nh=41,fileOutH="tmp.h")
+        t0, p = srfunc.wiggler_trajectory(b_from=2, nPer=NPERIODS, nTrajPoints=NTRAJPOINTS, \
+                                         ener_gev=ENERGY, per=ULAMBDA, inData="", trajFile=outFileTraj)
+
+    #
+    # now spectra
+    #
+    if SLIT_FLAG == 0:
+        e, f0, p0 = srfunc.wiggler_spectrum(t0, enerMin=PHOT_ENERGY_MIN, enerMax=PHOT_ENERGY_MAX, nPoints=NPOINTS, \
+                                        electronCurrent=CURRENT*1e-3, outFile=outFile, elliptical=False)
+    else:
+        e, f0, p0 = srfunc.wiggler_spectrum_on_aperture(t0, enerMin=PHOT_ENERGY_MIN, enerMax=PHOT_ENERGY_MAX, nPoints=NPOINTS, \
+                                            electronCurrent=CURRENT * 1e-3, outFile=outFile, elliptical=False,
+                                            psi_min=SLIT_YMIN_MM / SLIT_D, # mrad
+                                            psi_max=SLIT_YMAX_MM / SLIT_D,  # mrad
+                                            psi_npoints=SLIT_NY,
+                                            theta_min=SLIT_XMIN_MM / SLIT_D,  # mrad
+                                            theta_max=SLIT_XMAX_MM / SLIT_D,  # mrad
+                                            )
+
+    try:
+        cumulated_power = p0.cumsum() * numpy.abs(e[0] - e[1])
+    except:
+        cumulated_power = 0.0
+
+    print("\nPower from integral of spectrum (sum rule): %8.3f W" % (cumulated_power[-1]))
+    return e, f0, p0 , cumulated_power, t0, p
 
 def trapezoidal_rule_2d_1darrays(data2D,h=None,v=None):
     if h is None:
@@ -594,60 +655,60 @@ if __name__ == "__main__":
     #
     # script to make the calculations (created by XOPPY:wiggler_radiation)
     #
-    h5_parameters = dict()
-    h5_parameters["ELECTRONENERGY"] = 6.0
-    h5_parameters["ELECTRONCURRENT"] = 0.2
-    h5_parameters["PERIODID"] = 0.15
-    h5_parameters["NPERIODS"] = 10.0
-    h5_parameters["KV"] = 21.015
-    h5_parameters["FIELD"] = 0  # 0= sinusoidal, 1=from file
-    h5_parameters["FILE"] = ''
-    h5_parameters["POLARIZATION"] = 0  # 0=total, 1=s, 2=p
-    h5_parameters["DISTANCE"] = 30.0
-    h5_parameters["HSLITPOINTS"] = 500
-    h5_parameters["VSLITPOINTS"] = 500
-    h5_parameters["PHOTONENERGYMIN"] = 100.0
-    h5_parameters["PHOTONENERGYMAX"] = 100100.0
-    h5_parameters["PHOTONENERGYPOINTS"] = 101
-    h5_parameters["SHIFT_X_FLAG"] = 0
-    h5_parameters["SHIFT_X_VALUE"] = 0.0
-    h5_parameters["SHIFT_BETAX_FLAG"] = 0
-    h5_parameters["SHIFT_BETAX_VALUE"] = 0.0
-    h5_parameters["CONVOLUTION"] = 1
-
-    e, h, v, p, traj = xoppy_calc_wiggler_radiation(
-        ELECTRONENERGY=h5_parameters["ELECTRONENERGY"],
-        ELECTRONCURRENT=h5_parameters["ELECTRONCURRENT"],
-        PERIODID=h5_parameters["PERIODID"],
-        NPERIODS=h5_parameters["NPERIODS"],
-        KV=h5_parameters["KV"],
-        FIELD=h5_parameters["FIELD"],
-        FILE=h5_parameters["FILE"],
-        POLARIZATION=h5_parameters["POLARIZATION"],
-        DISTANCE=h5_parameters["DISTANCE"],
-        HSLITPOINTS=h5_parameters["HSLITPOINTS"],
-        VSLITPOINTS=h5_parameters["VSLITPOINTS"],
-        PHOTONENERGYMIN=h5_parameters["PHOTONENERGYMIN"],
-        PHOTONENERGYMAX=h5_parameters["PHOTONENERGYMAX"],
-        PHOTONENERGYPOINTS=h5_parameters["PHOTONENERGYPOINTS"],
-        SHIFT_X_FLAG=h5_parameters["SHIFT_X_FLAG"],
-        SHIFT_X_VALUE=h5_parameters["SHIFT_X_VALUE"],
-        SHIFT_BETAX_FLAG=h5_parameters["SHIFT_BETAX_FLAG"],
-        SHIFT_BETAX_VALUE=h5_parameters["SHIFT_BETAX_VALUE"],
-        CONVOLUTION=h5_parameters["CONVOLUTION"],
-        h5_file="wiggler_radiation.h5",
-        h5_entry_name="XOPPY_RADIATION",
-        h5_initialize=True,
-        h5_parameters=h5_parameters,
-        do_plot=0,
-        PASSEPARTOUT=1,
-    )
-
-    # example plot
-    from srxraylib.plot.gol import plot_image
-
-    plot_image(p[0], h, v, title="Flux [photons/s] per 0.1 bw per mm2 at %9.3f eV" % (25100.0), xtitle="H [mm]",
-               ytitle="V [mm]")
+    # h5_parameters = dict()
+    # h5_parameters["ELECTRONENERGY"] = 6.0
+    # h5_parameters["ELECTRONCURRENT"] = 0.2
+    # h5_parameters["PERIODID"] = 0.15
+    # h5_parameters["NPERIODS"] = 10.0
+    # h5_parameters["KV"] = 21.015
+    # h5_parameters["FIELD"] = 0  # 0= sinusoidal, 1=from file
+    # h5_parameters["FILE"] = ''
+    # h5_parameters["POLARIZATION"] = 0  # 0=total, 1=s, 2=p
+    # h5_parameters["DISTANCE"] = 30.0
+    # h5_parameters["HSLITPOINTS"] = 500
+    # h5_parameters["VSLITPOINTS"] = 500
+    # h5_parameters["PHOTONENERGYMIN"] = 100.0
+    # h5_parameters["PHOTONENERGYMAX"] = 100100.0
+    # h5_parameters["PHOTONENERGYPOINTS"] = 101
+    # h5_parameters["SHIFT_X_FLAG"] = 0
+    # h5_parameters["SHIFT_X_VALUE"] = 0.0
+    # h5_parameters["SHIFT_BETAX_FLAG"] = 0
+    # h5_parameters["SHIFT_BETAX_VALUE"] = 0.0
+    # h5_parameters["CONVOLUTION"] = 1
+    #
+    # e, h, v, p, traj = xoppy_calc_wiggler_radiation(
+    #     ELECTRONENERGY=h5_parameters["ELECTRONENERGY"],
+    #     ELECTRONCURRENT=h5_parameters["ELECTRONCURRENT"],
+    #     PERIODID=h5_parameters["PERIODID"],
+    #     NPERIODS=h5_parameters["NPERIODS"],
+    #     KV=h5_parameters["KV"],
+    #     FIELD=h5_parameters["FIELD"],
+    #     FILE=h5_parameters["FILE"],
+    #     POLARIZATION=h5_parameters["POLARIZATION"],
+    #     DISTANCE=h5_parameters["DISTANCE"],
+    #     HSLITPOINTS=h5_parameters["HSLITPOINTS"],
+    #     VSLITPOINTS=h5_parameters["VSLITPOINTS"],
+    #     PHOTONENERGYMIN=h5_parameters["PHOTONENERGYMIN"],
+    #     PHOTONENERGYMAX=h5_parameters["PHOTONENERGYMAX"],
+    #     PHOTONENERGYPOINTS=h5_parameters["PHOTONENERGYPOINTS"],
+    #     SHIFT_X_FLAG=h5_parameters["SHIFT_X_FLAG"],
+    #     SHIFT_X_VALUE=h5_parameters["SHIFT_X_VALUE"],
+    #     SHIFT_BETAX_FLAG=h5_parameters["SHIFT_BETAX_FLAG"],
+    #     SHIFT_BETAX_VALUE=h5_parameters["SHIFT_BETAX_VALUE"],
+    #     CONVOLUTION=h5_parameters["CONVOLUTION"],
+    #     h5_file="wiggler_radiation.h5",
+    #     h5_entry_name="XOPPY_RADIATION",
+    #     h5_initialize=True,
+    #     h5_parameters=h5_parameters,
+    #     do_plot=0,
+    #     PASSEPARTOUT=1,
+    # )
+    #
+    # # example plot
+    # from srxraylib.plot.gol import plot_image
+    #
+    # plot_image(p[0], h, v, title="Flux [photons/s] per 0.1 bw per mm2 at %9.3f eV" % (25100.0), xtitle="H [mm]",
+    #            ytitle="V [mm]")
     #
     # end script
     #
@@ -714,3 +775,146 @@ if __name__ == "__main__":
     #
     # end script
     #
+
+    #############################################################
+    # wiggler comparison (fully integrated)
+    #
+
+    if False:
+
+        # script to make the calculations (created by XOPPY:wiggler)
+
+        from xoppylib.sources.xoppy_bm_wiggler import xoppy_calc_wigg
+
+        energy, flux, spectral_power, cumulated_power, traj, traj_info = xoppy_calc_wigg(
+            FIELD=0,
+            NPERIODS=10,
+            ULAMBDA=0.15,
+            K=22.591,
+            ENERGY=6.0,
+            PHOT_ENERGY_MIN=100.0,
+            PHOT_ENERGY_MAX=100100.0,
+            NPOINTS=100,
+            NTRAJPOINTS=101,
+            CURRENT=200.0,
+            FILE="?")
+
+        #
+        # script to make the calculations (created by XOPPY:WS)
+        #
+        import numpy
+        from xoppylib.xoppy_run_binaries import xoppy_calc_ws
+
+        out_file = xoppy_calc_ws(
+            ENERGY=6.0,
+            CUR=200.0,
+            PERIOD=15.0,
+            N=10.0,
+            KX=0.0,
+            KY=22.591,
+            EMIN=100.0,
+            EMAX=100100.0,
+            NEE=1000,
+            D=30.0,
+            XPC=0.0,
+            YPC=0.0,
+            XPS=115.0,
+            YPS=60.0,
+            NXP=70,
+            NYP=70,
+        )
+
+        # data to pass to power
+        data = numpy.loadtxt(out_file)
+        energy2 = data[:, 0]
+        flux2 = data[:, 1]
+        # spectral_power = data[:, 2]
+        # cumulated_power = data[:, 3]
+
+        #
+        # example plot
+        #
+        from srxraylib.plot.gol import plot
+
+        plot(energy, flux,
+             energy2, flux2,
+             xtitle="Photon energy [eV]", ytitle="Flux [photons/s/0.1%bw]", title="WS Flux",
+             legend=['WIGGLER', 'WS'],
+             xlog=0, ylog=0, show=True)
+
+
+    ##########################################################################
+    # wiggler comparison (integrated over a slit)
+    #
+
+    #
+    # script to make the calculations (created by XOPPY:wiggler)
+    #
+
+    if True:
+
+        from xoppylib.sources.xoppy_bm_wiggler import xoppy_calc_wiggler_on_aperture
+
+        energy, flux, spectral_power, cumulated_power, traj, traj_info = xoppy_calc_wiggler_on_aperture(
+            FIELD=0,
+            NPERIODS=10,
+            ULAMBDA=0.15,
+            K=22.591,
+            ENERGY=6.0,
+            PHOT_ENERGY_MIN=100.0,
+            PHOT_ENERGY_MAX=100100.0,
+            NPOINTS=100,
+            NTRAJPOINTS=101,
+            CURRENT=200.0,
+            FILE="?",
+            SLIT_FLAG=1,
+            SLIT_D=30.0,
+            SLIT_NY=50,
+            SLIT_XMIN_MM=-115/2 * 0.4,
+            SLIT_XMAX_MM=+115/2 * 0.4,
+            SLIT_YMIN_MM=-60/2  * 0.3,
+            SLIT_YMAX_MM=+60/2  * 0.3,
+        )
+
+        #
+        # script to make the calculations (created by XOPPY:WS)
+        #
+        import numpy
+        from xoppylib.xoppy_run_binaries import xoppy_calc_ws
+
+        out_file = xoppy_calc_ws(
+            ENERGY=6.0,
+            CUR=200.0,
+            PERIOD=15.0,
+            N=10.0,
+            KX=0.0,
+            KY=22.591,
+            EMIN=100.0,
+            EMAX=100100.0,
+            NEE=1000,
+            D=30.0,
+            XPC=0.0,
+            YPC=0.0,
+            XPS=115.0 * 0.4,
+            YPS=60.0  * 0.3,
+            NXP=70,
+            NYP=70,
+        )
+
+        # data to pass to power
+        data = numpy.loadtxt(out_file)
+        energy2 = data[:, 0]
+        flux2 = data[:, 1]
+        # spectral_power = data[:, 2]
+        # cumulated_power = data[:, 3]
+
+        #
+        # example plot
+        #
+        from srxraylib.plot.gol import plot
+
+        plot(energy, flux,
+             energy2, flux2,
+             xtitle="Photon energy [eV]", ytitle="Flux [photons/s/0.1%bw]", title="WS Flux",
+             legend=['WIGGLER', 'WS'],
+             xlog=0, ylog=0, show=True)

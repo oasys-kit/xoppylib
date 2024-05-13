@@ -347,7 +347,7 @@ def calc1d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoi
         sigYp = bl['ElectronBeamDivergenceV'] #vertical RMS angular divergence [rad]
         sigEperE = bl['ElectronEnergySpread']
 
-    print("calc1dSrw: starting calculation using ElectronEnergySpead=%e \n"%((sigEperE)))
+    print("calc1d_srw: starting calculation using ElectronEnergySpead=%e \n"%((sigEperE)))
 
     #2nd order stat. moments:
     eBeam.arStatMom2[0] = sigX*sigX #<(x-<x>)^2>
@@ -383,7 +383,7 @@ def calc1d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoi
 
     srwlib.srwl.CalcStokesUR(stkF, eBeam, und, arPrecF)
 
-    print('Done calc1dSrw calculation in %10.3f s'%(time.time()-t0))
+    print('Done calc1d_srw calculation in %10.3f s'%(time.time()-t0))
     #**********************Saving results
 
     if fileName is not None:
@@ -794,6 +794,7 @@ def calc2d_srw(bl,zero_emittance=False,hSlitPoints=101,vSlitPoints=51,
         sigY =  bl['ElectronBeamSizeV'] #vertical RMS size of e-beam [m]
         sigYp = bl['ElectronBeamDivergenceV'] #vertical RMS angular divergence [rad]
 
+    print("calc2d_srw: starting calculation using ElectronEnergySpead=%e \n" % ((sigEperE)))
     #2nd order stat. moments:
     eBeam.arStatMom2[0] = sigX*sigX #<(x-<x>)^2>
     eBeam.arStatMom2[1] = 0.0 #<(x-<x>)(x'-<x'>)>
@@ -1315,6 +1316,7 @@ def calc3d_srw(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoi
     if zero_emittance:
         eBeam = _srw_electron_beam(E=bl['ElectronEnergy'],Iavg=bl['ElectronCurrent'],) # no emmitance now
     else:
+        print("calc3d_srw: starting calculation using ElectronEnergySpead=%e \n" % (bl['ElectronEnergySpread']))
         eBeam = _srw_electron_beam(E=bl['ElectronEnergy'], sigE = bl['ElectronEnergySpread'], Iavg=bl['ElectronCurrent'],
                      sigX=bl['ElectronBeamSizeH'], sigY=bl['ElectronBeamSizeV'],
                      sigXp=bl['ElectronBeamDivergenceH'], sigYp=bl['ElectronBeamDivergenceV'])
