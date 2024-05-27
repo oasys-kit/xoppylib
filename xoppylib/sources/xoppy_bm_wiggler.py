@@ -234,7 +234,11 @@ def xoppy_calc_wiggler_on_aperture(FIELD=0,
                                    K=14.0,
                                    ENERGY=6.04,
                                    PHOT_ENERGY_MIN=100.0,
-                                   PHOT_ENERGY_MAX=100100.0, NPOINTS=100, NTRAJPOINTS=101, CURRENT=200.0, FILE="?",
+                                   PHOT_ENERGY_MAX=100100.0,
+                                   NPOINTS=100,
+                                   NTRAJPOINTS=101,
+                                   CURRENT=200.0,
+                                   FILE="?",
                                    SLIT_FLAG=0,
                                    SLIT_D=30.0,
                                    SLIT_NY=100,
@@ -242,6 +246,11 @@ def xoppy_calc_wiggler_on_aperture(FIELD=0,
                                    SLIT_XMAX_MM=+1.0,
                                    SLIT_YMIN_MM=-1.0,
                                    SLIT_YMAX_MM=+1.0,
+                                   SHIFT_X_FLAG=0,
+                                   SHIFT_X_VALUE=0.0,
+                                   SHIFT_BETAX_FLAG=0,
+                                   SHIFT_BETAX_VALUE=0.0,
+                                   SLIT_POINTS_FACTOR=1,
                                    ):
 
     print("Inside xoppy_calc_wiggler_on_aperture. ")
@@ -256,7 +265,11 @@ def xoppy_calc_wiggler_on_aperture(FIELD=0,
     if FIELD == 1:
         # magnetic field from B(s) map
         t0,p = srfunc.wiggler_trajectory(b_from=1, nPer=NPERIODS, nTrajPoints=NTRAJPOINTS, \
-                                         ener_gev=ENERGY, inData=FILE, trajFile=outFileTraj)
+                                         ener_gev=ENERGY, inData=FILE, trajFile=outFileTraj,\
+                                         shift_x_flag = SHIFT_X_FLAG, \
+                                         shift_x_value = SHIFT_X_VALUE, \
+                                         shift_betax_flag = SHIFT_BETAX_FLAG, \
+                                         shift_betax_value = SHIFT_BETAX_VALUE)
     if FIELD == 2:
         # magnetic field from harmonics
         # hh = srfunc.wiggler_harmonics(b_t,Nh=41,fileOutH="tmp.h")
@@ -277,6 +290,7 @@ def xoppy_calc_wiggler_on_aperture(FIELD=0,
                                             psi_npoints=SLIT_NY,
                                             theta_min=SLIT_XMIN_MM / SLIT_D,  # mrad
                                             theta_max=SLIT_XMAX_MM / SLIT_D,  # mrad
+                                            slit_points_factor=SLIT_POINTS_FACTOR
                                             )
 
     try:
@@ -357,7 +371,7 @@ def xoppy_calc_wiggler_radiation(
             shift_x_flag = SHIFT_X_FLAG,
             shift_x_value = SHIFT_X_VALUE,
             shift_betax_flag = SHIFT_BETAX_FLAG,
-            shift_betax_value = SHIFT_BETAX_FLAG)
+            shift_betax_value = SHIFT_BETAX_VALUE)
     if FIELD == 2:
         raise("Not implemented")
 
