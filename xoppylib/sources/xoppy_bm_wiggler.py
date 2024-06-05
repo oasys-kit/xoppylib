@@ -234,14 +234,24 @@ def xoppy_calc_wiggler_on_aperture(FIELD=0,
                                    K=14.0,
                                    ENERGY=6.04,
                                    PHOT_ENERGY_MIN=100.0,
-                                   PHOT_ENERGY_MAX=100100.0, NPOINTS=100, NTRAJPOINTS=101, CURRENT=200.0, FILE="?",
+                                   PHOT_ENERGY_MAX=100100.0,
+                                   NPOINTS=100,
+                                   NTRAJPOINTS=101,
+                                   CURRENT=200.0,
+                                   FILE="?",
                                    SLIT_FLAG=0,
                                    SLIT_D=30.0,
                                    SLIT_NY=100,
-                                   SLIT_XMIN_MM=-1.0,
-                                   SLIT_XMAX_MM=+1.0,
-                                   SLIT_YMIN_MM=-1.0,
-                                   SLIT_YMAX_MM=+1.0,
+                                   SLIT_WIDTH_H_MM=1.0,
+                                   SLIT_HEIGHT_V_MM=1.0,
+                                   SLIT_CENTER_H_MM=0.0,
+                                   SLIT_CENTER_V_MM=0.0,
+                                   SHIFT_X_FLAG=0,
+                                   SHIFT_X_VALUE=0.0,
+                                   SHIFT_BETAX_FLAG=0,
+                                   SHIFT_BETAX_VALUE=0.0,
+                                   TRAJ_RESAMPLING_FACTOR=1e4,
+                                   SLIT_POINTS_FACTOR=1,
                                    ):
 
     print("Inside xoppy_calc_wiggler_on_aperture. ")
@@ -256,7 +266,11 @@ def xoppy_calc_wiggler_on_aperture(FIELD=0,
     if FIELD == 1:
         # magnetic field from B(s) map
         t0,p = srfunc.wiggler_trajectory(b_from=1, nPer=NPERIODS, nTrajPoints=NTRAJPOINTS, \
-                                         ener_gev=ENERGY, inData=FILE, trajFile=outFileTraj)
+                                         ener_gev=ENERGY, inData=FILE, trajFile=outFileTraj,\
+                                         shift_x_flag = SHIFT_X_FLAG, \
+                                         shift_x_value = SHIFT_X_VALUE, \
+                                         shift_betax_flag = SHIFT_BETAX_FLAG, \
+                                         shift_betax_value = SHIFT_BETAX_VALUE)
     if FIELD == 2:
         # magnetic field from harmonics
         # hh = srfunc.wiggler_harmonics(b_t,Nh=41,fileOutH="tmp.h")
@@ -272,11 +286,13 @@ def xoppy_calc_wiggler_on_aperture(FIELD=0,
     else:
         e, f0, p0 = srfunc.wiggler_spectrum_on_aperture(t0, enerMin=PHOT_ENERGY_MIN, enerMax=PHOT_ENERGY_MAX, nPoints=NPOINTS, \
                                             electronCurrent=CURRENT * 1e-3, outFile=outFile, elliptical=False,
-                                            psi_min=SLIT_YMIN_MM / SLIT_D, # mrad
-                                            psi_max=SLIT_YMAX_MM / SLIT_D,  # mrad
+                                            psi_min=(-SLIT_HEIGHT_V_MM / 2 + SLIT_CENTER_V_MM) / SLIT_D, # mrad
+                                            psi_max=(SLIT_HEIGHT_V_MM / 2 + SLIT_CENTER_V_MM) / SLIT_D,  # mrad
                                             psi_npoints=SLIT_NY,
-                                            theta_min=SLIT_XMIN_MM / SLIT_D,  # mrad
-                                            theta_max=SLIT_XMAX_MM / SLIT_D,  # mrad
+                                            theta_min=(-SLIT_WIDTH_H_MM / 2 + SLIT_CENTER_H_MM) / SLIT_D,  # mrad
+                                            theta_max=(SLIT_WIDTH_H_MM / 2 + SLIT_CENTER_H_MM) / SLIT_D,  # mrad
+                                            traj_res_fac=TRAJ_RESAMPLING_FACTOR,
+                                            slit_points_factor=SLIT_POINTS_FACTOR
                                             )
 
     try:
@@ -284,6 +300,7 @@ def xoppy_calc_wiggler_on_aperture(FIELD=0,
     except:
         cumulated_power = 0.0
 
+    print("\n Flux peak: %.2e Ph/s/0.1%%BW at the photon energy: %.2f eV" % (max(f0), e[numpy.argmax(f0)]))    
     print("\nPower from integral of spectrum (sum rule): %8.3f W" % (cumulated_power[-1]))
     return e, f0, p0 , cumulated_power, t0, p
 
@@ -357,7 +374,7 @@ def xoppy_calc_wiggler_radiation(
             shift_x_flag = SHIFT_X_FLAG,
             shift_x_value = SHIFT_X_VALUE,
             shift_betax_flag = SHIFT_BETAX_FLAG,
-            shift_betax_value = SHIFT_BETAX_FLAG)
+            shift_betax_value = SHIFT_BETAX_VALUE)
     if FIELD == 2:
         raise("Not implemented")
 
