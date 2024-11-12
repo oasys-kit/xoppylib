@@ -1,7 +1,7 @@
 #
 # tools for power3d app
 #
-
+import os
 import numpy
 import scipy.constants as codata
 import h5py
@@ -58,7 +58,7 @@ def calculate_component_absorbance_and_transmittance(
     defection=1, # deflection 0=H 1=V
     dens="?",
     roughness=0.0,
-    flags=0,  # 0=Filter 1=Mirror 2 = Aperture 3 magnifier
+    flags=0,  # 0=Filter 1=Mirror 2 = Aperture 3 magnifier, 4 screen rotation, 5 thin object filter
     hgap=1000.0,
     vgap=1000.0,
     hgapcenter=0.0,
@@ -66,7 +66,10 @@ def calculate_component_absorbance_and_transmittance(
     hmag=1.0,
     vmag=1.0,
     hrot=0.0,
-    vrot=0.0,):
+    vrot=0.0,
+    thin_object_file='',
+    thin_object_thickness_outside_file_area=0.0,
+    ):
 
     #
     # important: the transmittance calculated here is referred on axes perp to the beam
@@ -87,7 +90,7 @@ def calculate_component_absorbance_and_transmittance(
     #
     # get undefined densities
     #
-    if flags <= 1:
+    if flags in [0,1,5]:
         try:  # apply written value
             rho = float(dens)
         except:  # in case of ?
@@ -128,6 +131,9 @@ def calculate_component_absorbance_and_transmittance(
         txt += '      *****   oe  [Screen rotated] *************\n'
         txt += '      H rotation angle [deg]: %f \n' % (hrot)
         txt += '      V rotation angle [deg]: %f \n' % (vrot)
+    else:
+        txt += '      *****   oe  [Thin object filter] *************\n'
+        txt += '      File with thickness [h5, OASYS-format]: %s \n' % (thin_object_file)
 
     if flags == 0:  # filter
         for j, energy in enumerate(e):
@@ -213,6 +219,39 @@ def calculate_component_absorbance_and_transmittance(
 
         absorbance = 1.0 - transmittance
 
+    elif flags == 5:  # thin object filter
+        H = h
+        V = v
+
+        xx, yy, zz = read_surface_file(file_name=thin_object_file)
+        thick_pre = zz.T * 1e3 # im mm
+        xx *= 1e3 # im mm
+        yy *= 1e3 # im mm
+
+
+        f = RectBivariateSpline(xx,
+                                yy,
+                                thick_pre)
+        thick_interpolated = f(h, v)
+
+        # outside definition (supposed centered)
+        h_indices_bad = numpy.where(numpy.abs(H) > (xx.max()))
+        if len(h_indices_bad) > 0:
+            thick_interpolated[h_indices_bad, :] = thin_object_thickness_outside_file_area * 1e3 # in mm
+        v_indices_bad = numpy.where(numpy.abs(V) > (yy.max()))
+        if len(v_indices_bad) > 0:
+            thick_interpolated[:, v_indices_bad] = thin_object_thickness_outside_file_area * 1e3 # in mm
+
+
+        for j, energy in enumerate(e):
+            tmp = xraylib.CS_Total_CP(substance, energy / 1000.0)
+            transmittance[j, :, :] = numpy.exp(-tmp * dens * (thick_interpolated[:, :] / 10.0))
+
+        absorbance = 1.0 - transmittance
+
+    else:
+        raise NotImplementedError("flags=%d" % flags)
+
     return transmittance, absorbance, E, H, V, txt
 
 def apply_transmittance_to_incident_beam(transmittance,p0,e0,h0,v0,
@@ -281,6 +320,18 @@ def apply_transmittance_to_incident_beam(transmittance,p0,e0,h0,v0,
 #
 # file io
 #
+
+# copied from OASYS1
+def read_surface_file(file_name, subgroup_name = "surface_file"):
+    if not os.path.isfile(file_name): raise ValueError("File " + file_name + " not existing")
+
+    file = h5py.File(file_name, 'r')
+    xx = file[subgroup_name + "/X"][()]
+    yy = file[subgroup_name + "/Y"][()]
+    zz = file[subgroup_name + "/Z"][()]
+
+    return xx, yy, zz
+
 def load_radiation_from_h5file(file_h5, subtitle="XOPPY_RADIATION"):
 
     hf = h5py.File(file_h5, 'r')
@@ -511,5 +562,48 @@ def info_total_power(p, e, v, h, transmittance, absorbance, EL1_FLAG=1):
 
     return txt
 
+if __name__ == "__main__":
+    GAPH = 0.001
+    GAPV = 0.001
+    HSLITPOINTS = 41
+    VSLITPOINTS = 41
+    PHOTONENERGYMIN = 7000.0
+    PHOTONENERGYMAX = 8000.0
+    PHOTONENERGYPOINTS = 20
+
+    e0 = numpy.linspace(PHOTONENERGYMIN, PHOTONENERGYMAX, PHOTONENERGYPOINTS)
+    h0 = numpy.linspace(-0.5 * GAPH, 0.5 * GAPH, HSLITPOINTS)
+    v0 = numpy.linspace(-0.5 * GAPV, 0.5 * GAPV, VSLITPOINTS)
 
 
+
+    transmittance, absorbance, E, H, V, txt  = calculate_component_absorbance_and_transmittance(
+                    e0, # energy in eV
+                    h0, # h in mm
+                    v0, # v in mm
+                    substance='Be',
+                    thick=0.5,
+                    angle=3.0,
+                    defection=1,
+                    dens='?',
+                    roughness=0.0,
+                    flags=5, # 0 = Filter, 5 = Thin object filter
+                    hgap=1000.0,
+                    vgap=1000.0,
+                    hgapcenter=0.0,
+                    vgapcenter=0.0,
+                    hmag=1.0,
+                    vmag=1.0,
+                    hrot=0.0,
+                    vrot=0.0,
+                    thin_object_file='/home/srio/Oasys/lens.h5',
+                    thin_object_thickness_outside_file_area=163e-6,
+                    )
+
+    from srxraylib.plot.gol import plot_image, plot
+
+    plot(e0, transmittance[:,0,0],
+         e0, absorbance[:,0,0],
+         xtitle="Photon energy [eV]", legend=["Transmittance","Absorbance"], show=0)
+    plot_image(transmittance[0,:,:], h0, v0,title="Transmittance at E=%g eV" % (e0[0]),
+               xtitle="H [mm]",ytitle="V [mm]",aspect='auto')
