@@ -11,7 +11,25 @@ import scipy.constants as codata
 
 from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
 
-from oasys.util.oasys_util import get_fwhm
+# --------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
+
+# copied from OASYS1
+def get_fwhm(histogram, bins, ret0=None):
+    fwhm = ret0
+    quote = ret0
+    coordinates = None
+
+    if histogram.size > 1:
+        quote = numpy.max(histogram)*0.5
+        cursor = numpy.where(histogram >= quote)
+
+        if histogram[cursor].size > 1:
+            bin_size    = bins[1]-bins[0]
+            fwhm        = bin_size*(cursor[0][-1]-cursor[0][0])
+            coordinates = (bins[cursor[0][0]], bins[cursor[0][-1]])
+
+    return fwhm, quote, coordinates
 
 # --------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------
@@ -660,144 +678,7 @@ if __name__ == "__main__":
     set_qt()
 
 
-    # e, h, v, p, traj = xoppy_calc_wiggler_radiation(PHOTONENERGYPOINTS=100,do_plot = False, POLARIZATION=0, NPERIODS=3.5)
-    # e, h, v, p, traj = xoppy_calc_wiggler_radiation(PHOTONENERGYPOINTS=3,FIELD=1)
-
-    # create_magnetic_field_for_bending_magnet(do_plot=True, filename="tmp.txt", B0=-1.0, divergence=1e-3, radius=10.0,
-    #                                         npoints=500)
-    #
-    # e, h, v, p, traj = xoppy_calc_wiggler_radiation(PHOTONENERGYPOINTS=3, do_plot=True, POLARIZATION=0,
-    #                                                 FIELD=1, FILE="tmp.txt")
-
-    #
-    # script to make the calculations (created by XOPPY:wiggler_radiation)
-    #
-    # h5_parameters = dict()
-    # h5_parameters["ELECTRONENERGY"] = 6.0
-    # h5_parameters["ELECTRONCURRENT"] = 0.2
-    # h5_parameters["PERIODID"] = 0.15
-    # h5_parameters["NPERIODS"] = 10.0
-    # h5_parameters["KV"] = 21.015
-    # h5_parameters["FIELD"] = 0  # 0= sinusoidal, 1=from file
-    # h5_parameters["FILE"] = ''
-    # h5_parameters["POLARIZATION"] = 0  # 0=total, 1=s, 2=p
-    # h5_parameters["DISTANCE"] = 30.0
-    # h5_parameters["HSLITPOINTS"] = 500
-    # h5_parameters["VSLITPOINTS"] = 500
-    # h5_parameters["PHOTONENERGYMIN"] = 100.0
-    # h5_parameters["PHOTONENERGYMAX"] = 100100.0
-    # h5_parameters["PHOTONENERGYPOINTS"] = 101
-    # h5_parameters["SHIFT_X_FLAG"] = 0
-    # h5_parameters["SHIFT_X_VALUE"] = 0.0
-    # h5_parameters["SHIFT_BETAX_FLAG"] = 0
-    # h5_parameters["SHIFT_BETAX_VALUE"] = 0.0
-    # h5_parameters["CONVOLUTION"] = 1
-    #
-    # e, h, v, p, traj = xoppy_calc_wiggler_radiation(
-    #     ELECTRONENERGY=h5_parameters["ELECTRONENERGY"],
-    #     ELECTRONCURRENT=h5_parameters["ELECTRONCURRENT"],
-    #     PERIODID=h5_parameters["PERIODID"],
-    #     NPERIODS=h5_parameters["NPERIODS"],
-    #     KV=h5_parameters["KV"],
-    #     FIELD=h5_parameters["FIELD"],
-    #     FILE=h5_parameters["FILE"],
-    #     POLARIZATION=h5_parameters["POLARIZATION"],
-    #     DISTANCE=h5_parameters["DISTANCE"],
-    #     HSLITPOINTS=h5_parameters["HSLITPOINTS"],
-    #     VSLITPOINTS=h5_parameters["VSLITPOINTS"],
-    #     PHOTONENERGYMIN=h5_parameters["PHOTONENERGYMIN"],
-    #     PHOTONENERGYMAX=h5_parameters["PHOTONENERGYMAX"],
-    #     PHOTONENERGYPOINTS=h5_parameters["PHOTONENERGYPOINTS"],
-    #     SHIFT_X_FLAG=h5_parameters["SHIFT_X_FLAG"],
-    #     SHIFT_X_VALUE=h5_parameters["SHIFT_X_VALUE"],
-    #     SHIFT_BETAX_FLAG=h5_parameters["SHIFT_BETAX_FLAG"],
-    #     SHIFT_BETAX_VALUE=h5_parameters["SHIFT_BETAX_VALUE"],
-    #     CONVOLUTION=h5_parameters["CONVOLUTION"],
-    #     h5_file="wiggler_radiation.h5",
-    #     h5_entry_name="XOPPY_RADIATION",
-    #     h5_initialize=True,
-    #     h5_parameters=h5_parameters,
-    #     do_plot=0,
-    #     PASSEPARTOUT=1,
-    # )
-    #
-    # # example plot
-    # from srxraylib.plot.gol import plot_image
-    #
-    # plot_image(p[0], h, v, title="Flux [photons/s] per 0.1 bw per mm2 at %9.3f eV" % (25100.0), xtitle="H [mm]",
-    #            ytitle="V [mm]")
-    #
-    # end script
-    #
-
-    # #
-    # # script to make the calculations (created by XOPPY:wiggler_radiation)
-    # #
-    #
-    # from xoppylib.xoppy_bm_wiggler import xoppy_calc_wiggler_radiation
-    #
-    # h5_parameters = dict()
-    # h5_parameters["ELECTRONENERGY"] = 6.0
-    # h5_parameters["ELECTRONCURRENT"] = 0.2
-    # h5_parameters["PERIODID"] = 0.15
-    # h5_parameters["NPERIODS"] = 10.0
-    # h5_parameters["KV"] = 21.015
-    # h5_parameters["FIELD"] = 0  # 0= sinusoidal, 1=from file
-    # h5_parameters["FILE"] = ''
-    # h5_parameters["POLARIZATION"] = 0  # 0=total, 1=s, 2=p
-    # h5_parameters["DISTANCE"] = 30.0
-    # h5_parameters["HSLITPOINTS"] = 500
-    # h5_parameters["VSLITPOINTS"] = 500
-    # h5_parameters["PHOTONENERGYMIN"] = 100.0
-    # h5_parameters["PHOTONENERGYMAX"] = 100100.0
-    # h5_parameters["PHOTONENERGYPOINTS"] = 11
-    # h5_parameters["SHIFT_X_FLAG"] = 0
-    # h5_parameters["SHIFT_X_VALUE"] = 0.0
-    # h5_parameters["SHIFT_BETAX_FLAG"] = 0
-    # h5_parameters["SHIFT_BETAX_VALUE"] = 0.0
-    # h5_parameters["CONVOLUTION"] = 1
-    #
-    # e, h, v, p, traj = xoppy_calc_wiggler_radiation(
-    #     ELECTRONENERGY=h5_parameters["ELECTRONENERGY"],
-    #     ELECTRONCURRENT=h5_parameters["ELECTRONCURRENT"],
-    #     PERIODID=h5_parameters["PERIODID"],
-    #     NPERIODS=h5_parameters["NPERIODS"],
-    #     KV=h5_parameters["KV"],
-    #     FIELD=h5_parameters["FIELD"],
-    #     FILE=h5_parameters["FILE"],
-    #     POLARIZATION=h5_parameters["POLARIZATION"],
-    #     DISTANCE=h5_parameters["DISTANCE"],
-    #     HSLITPOINTS=h5_parameters["HSLITPOINTS"],
-    #     VSLITPOINTS=h5_parameters["VSLITPOINTS"],
-    #     PHOTONENERGYMIN=h5_parameters["PHOTONENERGYMIN"],
-    #     PHOTONENERGYMAX=h5_parameters["PHOTONENERGYMAX"],
-    #     PHOTONENERGYPOINTS=h5_parameters["PHOTONENERGYPOINTS"],
-    #     SHIFT_X_FLAG=h5_parameters["SHIFT_X_FLAG"],
-    #     SHIFT_X_VALUE=h5_parameters["SHIFT_X_VALUE"],
-    #     SHIFT_BETAX_FLAG=h5_parameters["SHIFT_BETAX_FLAG"],
-    #     SHIFT_BETAX_VALUE=h5_parameters["SHIFT_BETAX_VALUE"],
-    #     CONVOLUTION=h5_parameters["CONVOLUTION"],
-    #     h5_file="wiggler_radiation.h5",
-    #     h5_entry_name="XOPPY_RADIATION",
-    #     h5_initialize=True,
-    #     h5_parameters=h5_parameters,
-    #     do_plot=1,
-    # )
-    #
-    # # example plot
-    # from srxraylib.plot.gol import plot_image
-    #
-    # plot_image(p[0], h, v, title="Flux [photons/s] per 0.1 bw per mm2 at %9.3f eV" % (100.0), xtitle="H [mm]",
-    #            ytitle="V [mm]")
-    #
-    # end script
-    #
-
-    #############################################################
-    # wiggler comparison (fully integrated)
-    #
-
-    if False:
+    if True:
 
         # script to make the calculations (created by XOPPY:wiggler)
 
@@ -887,10 +768,10 @@ if __name__ == "__main__":
             SLIT_FLAG=1,
             SLIT_D=30.0,
             SLIT_NY=50,
-            SLIT_XMIN_MM=-115/2 * 0.4,
-            SLIT_XMAX_MM=+115/2 * 0.4,
-            SLIT_YMIN_MM=-60/2  * 0.3,
-            SLIT_YMAX_MM=+60/2  * 0.3,
+            SLIT_WIDTH_H_MM=115 * 0.4,
+            SLIT_CENTER_H_MM=0.0,
+            SLIT_HEIGHT_V_MM=60  * 0.3,
+            SLIT_CENTER_V_MM=0.0,
         )
 
         #
