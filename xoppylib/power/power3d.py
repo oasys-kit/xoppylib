@@ -63,12 +63,15 @@ def calculate_component_absorbance_and_transmittance(
     vgap=1000.0,
     hgapcenter=0.0,
     vgapcenter=0.0,
+    gapshape=0, # 0=rectangle, 1=circle
     hmag=1.0,
     vmag=1.0,
     hrot=0.0,
     vrot=0.0,
     thin_object_file='',
     thin_object_thickness_outside_file_area=0.0,
+    thin_object_back_profile_flag=0,
+    thin_object_back_profile_file='',
     ):
 
     #
@@ -133,7 +136,11 @@ def calculate_component_absorbance_and_transmittance(
         txt += '      V rotation angle [deg]: %f \n' % (vrot)
     else:
         txt += '      *****   oe  [Thin object filter] *************\n'
-        txt += '      File with thickness [h5, OASYS-format]: %s \n' % (thin_object_file)
+        txt += '      File with thickness for front surface [h5, OASYS-format]: %s \n' % (thin_object_file)
+        if thin_object_back_profile_flag == 0:
+            txt += '      Back surface set to z(x,y)=0\n'
+        elif thin_object_back_profile_flag == 1:
+            txt += '      File with thickness for back surface [h5, OASYS-format]: %s \n' % (thin_object_back_profile_file)
 
     if flags == 0:  # filter
         for j, energy in enumerate(e):
@@ -145,12 +152,18 @@ def calculate_component_absorbance_and_transmittance(
         V = v / numpy.cos(vrot * numpy.pi / 180)
 
         # aperture
-        h_indices_bad = numpy.where(numpy.abs(H - hgapcenter) > (0.5 * hgap))
-        if len(h_indices_bad) > 0:
-            transmittance[:, h_indices_bad, :] = 0.0
-        v_indices_bad = numpy.where(numpy.abs(V - vgapcenter) > (0.5 * vgap))
-        if len(v_indices_bad) > 0:
-            transmittance[:, :, v_indices_bad] = 0.0
+        if gapshape == 0:
+            h_indices_bad = numpy.where(numpy.abs(H - hgapcenter) > (0.5 * hgap))
+            if len(h_indices_bad) > 0:
+                transmittance[:, h_indices_bad, :] = 0.0
+            v_indices_bad = numpy.where(numpy.abs(V - vgapcenter) > (0.5 * vgap))
+            if len(v_indices_bad) > 0:
+                transmittance[:, :, v_indices_bad] = 0.0
+        elif gapshape == 1:
+            for i in range(H.size):
+                for j in range(V.size):
+                    if (((H[i] - hgapcenter) / (hgap / 2)) ** 2 + ((V[j] - vgapcenter) / (vgap / 2)) ** 2) > 1:
+                        transmittance[:, i, j] = 0.0
 
         absorbance = 1.0 - transmittance
 
@@ -188,22 +201,37 @@ def calculate_component_absorbance_and_transmittance(
         # size
         absorbance = 1.0 - transmittance
 
-        h_indices_bad = numpy.where(numpy.abs(H - hgapcenter) > (0.5 * hgap))
-        if len(h_indices_bad) > 0:
-            transmittance[:, h_indices_bad, :] = 0.0
-            absorbance[:, h_indices_bad, :] = 0.0
-        v_indices_bad = numpy.where(numpy.abs(V - vgapcenter) > (0.5 * vgap))
-        if len(v_indices_bad) > 0:
-            transmittance[:, :, v_indices_bad] = 0.0
-            absorbance[:, :, v_indices_bad] = 0.0
+        if gapshape == 0:
+            h_indices_bad = numpy.where(numpy.abs(H - hgapcenter) > (0.5 * hgap))
+            if len(h_indices_bad) > 0:
+                transmittance[:, h_indices_bad, :] = 0.0
+                absorbance[:, h_indices_bad, :] = 0.0
+            v_indices_bad = numpy.where(numpy.abs(V - vgapcenter) > (0.5 * vgap))
+            if len(v_indices_bad) > 0:
+                transmittance[:, :, v_indices_bad] = 0.0
+                absorbance[:, :, v_indices_bad] = 0.0
+        elif gapshape == 1:  # circle
+            for i in range(H.size):
+                for j in range(V.size):
+                    if (((H[i] - hgapcenter) / (hgap / 2)) ** 2 + ((V[j] - vgapcenter) / (vgap / 2)) ** 2) > 1:
+                        transmittance[:, i, j] = 0.0
+                        absorbance[:, i, j] = 0.0
+
+
 
     elif flags == 2:  # aperture
-        h_indices_bad = numpy.where(numpy.abs(H - hgapcenter) > (0.5 * hgap))
-        if len(h_indices_bad) > 0:
-            transmittance[:, h_indices_bad, :] = 0.0
-        v_indices_bad = numpy.where(numpy.abs(V - vgapcenter) > (0.5 * vgap))
-        if len(v_indices_bad) > 0:
-            transmittance[:, :, v_indices_bad] = 0.0
+        if gapshape == 0:
+            h_indices_bad = numpy.where(numpy.abs(H - hgapcenter) > (0.5 * hgap))
+            if len(h_indices_bad) > 0:
+                transmittance[:, h_indices_bad, :] = 0.0
+            v_indices_bad = numpy.where(numpy.abs(V - vgapcenter) > (0.5 * vgap))
+            if len(v_indices_bad) > 0:
+                transmittance[:, :, v_indices_bad] = 0.0
+        elif gapshape == 1:  # circle
+            for i in range(H.size):
+                for j in range(V.size):
+                    if (((H[i] - hgapcenter) / (hgap / 2))**2 + ((V[j] - vgapcenter)/ (vgap / 2))**2) > 1:
+                        transmittance[:, i, j] = 0.0
 
         absorbance = 1.0 - transmittance
 
@@ -223,11 +251,11 @@ def calculate_component_absorbance_and_transmittance(
         H = h
         V = v
 
+        # FRONT surface
         xx, yy, zz = read_surface_file(file_name=thin_object_file)
         thick_pre = zz.T * 1e3 # im mm
         xx *= 1e3 # im mm
         yy *= 1e3 # im mm
-
 
         f = RectBivariateSpline(xx,
                                 yy,
@@ -242,6 +270,30 @@ def calculate_component_absorbance_and_transmittance(
         if len(v_indices_bad) > 0:
             thick_interpolated[:, v_indices_bad] = thin_object_thickness_outside_file_area * 1e3 # in mm
 
+        # BACK surface
+        if thin_object_back_profile_flag == 0:
+            thick_interpolated_back = 0.0
+        elif thin_object_back_profile_flag == 1:
+            xx, yy, zz = read_surface_file(file_name=thin_object_back_profile_file)
+            thick_pre = zz.T * 1e3 # im mm
+            xx *= 1e3 # im mm
+            yy *= 1e3 # im mm
+
+            f = RectBivariateSpline(xx,
+                                    yy,
+                                    thick_pre)
+            thick_interpolated_back = f(h, v)
+
+            # outside definition (supposed centered) is set to zero
+            h_indices_bad = numpy.where(numpy.abs(H) > (xx.max()))
+            if len(h_indices_bad) > 0:
+                thick_interpolated_back[h_indices_bad, :] = 0.0
+            v_indices_bad = numpy.where(numpy.abs(V) > (yy.max()))
+            if len(v_indices_bad) > 0:
+                thick_interpolated_back[:, v_indices_bad] = 0.0
+
+        # total thickness is |front - back profiles|
+        thick_interpolated = numpy.abs(thick_interpolated - thick_interpolated_back)
 
         for j, energy in enumerate(e):
             tmp = xraylib.CS_Total_CP(substance, energy / 1000.0)
@@ -563,10 +615,10 @@ def info_total_power(p, e, v, h, transmittance, absorbance, EL1_FLAG=1):
     return txt
 
 if __name__ == "__main__":
-    GAPH = 0.001
-    GAPV = 0.001
-    HSLITPOINTS = 41
-    VSLITPOINTS = 41
+    GAPH = 0.002
+    GAPV = 0.002
+    HSLITPOINTS = 601
+    VSLITPOINTS = 401
     PHOTONENERGYMIN = 7000.0
     PHOTONENERGYMAX = 8000.0
     PHOTONENERGYPOINTS = 20
@@ -587,17 +639,20 @@ if __name__ == "__main__":
                     defection=1,
                     dens='?',
                     roughness=0.0,
-                    flags=5, # 0 = Filter, 5 = Thin object filter
-                    hgap=1000.0,
-                    vgap=1000.0,
-                    hgapcenter=0.0,
-                    vgapcenter=0.0,
+                    flags=5, # 0 = Filter, 2=Aperture, 5 = Thin object filter
+                    hgap=0.2e-3,
+                    vgap=0.1e-3,
+                    hgapcenter=0.1e-3,
+                    vgapcenter=0.1e-3,
+                    gapshape=1, # 0=rect
                     hmag=1.0,
                     vmag=1.0,
                     hrot=0.0,
                     vrot=0.0,
                     thin_object_file='/home/srio/Oasys/lens.h5',
                     thin_object_thickness_outside_file_area=163e-6,
+                    thin_object_back_profile_flag=0, # 0= z=0, 1=Back profile from file z(x,y)
+                    thin_object_back_profile_file='/home/srio/Oasys/lens.h5',
                     )
 
     from srxraylib.plot.gol import plot_image, plot
@@ -606,4 +661,4 @@ if __name__ == "__main__":
          e0, absorbance[:,0,0],
          xtitle="Photon energy [eV]", legend=["Transmittance","Absorbance"], show=0)
     plot_image(transmittance[0,:,:], h0, v0,title="Transmittance at E=%g eV" % (e0[0]),
-               xtitle="H [mm]",ytitle="V [mm]",aspect='auto')
+               xtitle="H [m]",ytitle="V [m]",aspect='auto')
