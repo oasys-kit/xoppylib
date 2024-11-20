@@ -402,13 +402,13 @@ def load_radiation_from_h5file(file_h5, subtitle="XOPPY_RADIATION"):
     code = "unknown"
 
     try:
-        if hf[subtitle + "/parameters/METHOD"].value == 0:
+        if hf[subtitle + "/parameters/METHOD"][()] == 0:
             code = 'US'
-        elif hf[subtitle + "/parameters/METHOD"].value == 1:
+        elif hf[subtitle + "/parameters/METHOD"][()] == 1:
             code = 'URGENT'
-        elif hf[subtitle + "/parameters/METHOD"].value == 2:
+        elif hf[subtitle + "/parameters/METHOD"][()] == 2:
             code = 'SRW'
-        elif hf[subtitle + "/parameters/METHOD"].value == 3:
+        elif hf[subtitle + "/parameters/METHOD"][()] == 3:
             code = 'pySRU'
     except:
         pass
