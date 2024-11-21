@@ -1546,7 +1546,7 @@ def calc_temperature_factor(temperature, crystal='Si', debyeTemperature=644.92,
     return temperatureFactor
 
 
-# todo: delete?
+# used in crystalpy
 def run_diff_pat(
     bragg_dict,
     preprocessor_file="xcrystal.bra",
@@ -1568,6 +1568,9 @@ def run_diff_pat(
     POISSON          = 0.22,
     CUT              = "2 -1 -1 ; 1 1 1 ; 0 0 0",
     FILECOMPLIANCE   = "mycompliance.dat",
+    MILLER_INDEX_H   = 1, # needed if ANISOTROPY=1
+    MILLER_INDEX_K   = 1, # needed if ANISOTROPY=1
+    MILLER_INDEX_L   = 1, # needed if ANISOTROPY=1
     # material_constants_library=None,
     ):
 
