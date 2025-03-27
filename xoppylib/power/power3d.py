@@ -6,12 +6,13 @@ import numpy
 import scipy.constants as codata
 import h5py
 import xraylib
+
 from xoppylib.scattering_functions.fresnel import reflectivity_fresnel
 from xoppylib.xoppy_xraylib_util import nist_compound_list, density
+from xoppylib.mlayer import MLayer
+
 from scipy.interpolate import interp2d, RectBivariateSpline
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
-
-import xraylib
 #
 # calculation
 #
@@ -50,15 +51,14 @@ def integral_3d(data3D, e=None, h=None, v=None, method=0):
 
 
 def calculate_component_absorbance_and_transmittance(
-    # p0,
-    e0, h0, v0, # todo: p0 not used
+    e0, h0, v0,
     substance="Si",
     thick=0.5,
     angle=3.5,
     defection=1, # deflection 0=H 1=V
     dens="?",
     roughness=0.0,
-    flags=0,  # 0=Filter 1=Mirror 2 = Aperture 3 magnifier, 4 screen rotation, 5 thin object filter
+    flags=0,  # 0=Filter 1=Mirror 2 = Aperture 3 magnifier, 4 screen rotation, 5 thin object filter, 6 multilayer
     hgap=1000.0,
     vgap=1000.0,
     hgapcenter=0.0,
@@ -72,8 +72,9 @@ def calculate_component_absorbance_and_transmittance(
     thin_object_thickness_outside_file_area=0.0,
     thin_object_back_profile_flag=0,
     thin_object_back_profile_file='',
+    multilayer_file='',
+    verbose=1,
     ):
-
     #
     # important: the transmittance calculated here is referred on axes perp to the beam
     # therefore they do not include geometrical corrections for correct integral
@@ -134,13 +135,16 @@ def calculate_component_absorbance_and_transmittance(
         txt += '      *****   oe  [Screen rotated] *************\n'
         txt += '      H rotation angle [deg]: %f \n' % (hrot)
         txt += '      V rotation angle [deg]: %f \n' % (vrot)
-    else:
+    elif flags == 5:
         txt += '      *****   oe  [Thin object filter] *************\n'
         txt += '      File with thickness for front surface [h5, OASYS-format]: %s \n' % (thin_object_file)
         if thin_object_back_profile_flag == 0:
             txt += '      Back surface set to z(x,y)=0\n'
         elif thin_object_back_profile_flag == 1:
             txt += '      File with thickness for back surface [h5, OASYS-format]: %s \n' % (thin_object_back_profile_file)
+    elif flags == 6:
+        txt += '      *****   oe  [Multilayer] *************\n'
+        txt += '      File with multilayer parameters and incident angle (energy scan) from XOPPY/Multilayer [h5]: %s \n' % (multilayer_file)
 
     if flags == 0:  # filter
         for j, energy in enumerate(e):
@@ -301,12 +305,97 @@ def calculate_component_absorbance_and_transmittance(
 
         absorbance = 1.0 - transmittance
 
+    elif flags == 6:  # multilayer
+        tmp = numpy.zeros(e.size)
+        try:
+            f = h5py.File(multilayer_file, 'r')
+            density1 = f["MLayer/parameters/density1"][()]
+            density2 = f["MLayer/parameters/density2"][()]
+            densityS = f["MLayer/parameters/densityS"][()]
+            gamma1 = numpy.array(f["MLayer/parameters/gamma1"])
+            material1 = f["MLayer/parameters/material1"][()]
+            material2 = f["MLayer/parameters/material2"][()]
+            materialS = f["MLayer/parameters/materialS"][()]
+            mlroughness1 = numpy.array(f["MLayer/parameters/mlroughness1"])
+            mlroughness2 = numpy.array(f["MLayer/parameters/mlroughness2"])
+            roughnessS = f["MLayer/parameters/roughnessS"][()]
+            np = f["MLayer/parameters/np"][()]
+            npair = f["MLayer/parameters/npair"][()]
+            thick = numpy.array(f["MLayer/parameters/thick"])
+
+            thetaN = numpy.array(f["MLayer/parameters/thetaN"])
+            energyN = numpy.array(f["MLayer/parameters/energyN"])
+            theta1 = numpy.array(f["MLayer/parameters/theta1"])
+
+            f.close()
+
+            if verbose:
+                print("===== data read from file: %s ======" % multilayer_file)
+                print("density1      = ", density1)
+                print("density2      = ", density2)
+                print("densityS      = ", densityS)
+                print("gamma1        = ", gamma1)
+                print("material1  (even, closer to substrte) = ", material1)
+                print("material2  (odd)                      = ", material2)
+                print("materialS  (substrate)                = ", materialS)
+                print("mlroughness1  = ", mlroughness1)
+                print("mlroughness2  = ", mlroughness2)
+                print("roughnessS    = ", roughnessS)
+                print("np            = ", np)
+                print("npair         = ", npair)
+                print("thick         = ", thick)
+                print("thetaN        = ", thetaN)
+                print("theta1        = ", theta1)
+                print("energyN        = ", energyN)
+                print("=====================================\n\n")
+
+            out = MLayer.initialize_from_bilayer_stack(
+                material_S=materialS, density_S=densityS, roughness_S=roughnessS,
+                material_E=material1, density_E=density1, roughness_E=mlroughness1[0],
+                material_O=material2, density_O=density2, roughness_O=mlroughness2[0],
+                bilayer_pairs=np,
+                bilayer_thickness=thick[0],
+                bilayer_gamma=gamma1[0],
+            )
+
+            rs, rp = out.scan_energy(e, theta1=numpy.degrees(angle * 1e-3), h5file="")
+
+        except:
+            raise Exception("Error reading file: %s" % filename)
+
+        if defection == 0:  # horizontally deflecting
+            for j, energy in enumerate(e):
+                transmittance[j, :, :] = rp[j]
+            H = h / numpy.sin(angle * 1e-3)
+        elif defection == 1:  # vertically deflecting
+            for j, energy in enumerate(e):
+                transmittance[j, :, :] = rs[j]
+            V = v / numpy.sin(angle * 1e-3)
+
+        # size
+        absorbance = 1.0 - transmittance
+
+        if gapshape == 0:
+            h_indices_bad = numpy.where(numpy.abs(H - hgapcenter) > (0.5 * hgap))
+            if len(h_indices_bad) > 0:
+                transmittance[:, h_indices_bad, :] = 0.0
+                absorbance[:, h_indices_bad, :] = 0.0
+            v_indices_bad = numpy.where(numpy.abs(V - vgapcenter) > (0.5 * vgap))
+            if len(v_indices_bad) > 0:
+                transmittance[:, :, v_indices_bad] = 0.0
+                absorbance[:, :, v_indices_bad] = 0.0
+        elif gapshape == 1:  # circle
+            for i in range(H.size):
+                for j in range(V.size):
+                    if (((H[i] - hgapcenter) / (hgap / 2)) ** 2 + ((V[j] - vgapcenter) / (vgap / 2)) ** 2) > 1:
+                        transmittance[:, i, j] = 0.0
+                        absorbance[:, i, j] = 0.0
     else:
         raise NotImplementedError("flags=%d" % flags)
 
     return transmittance, absorbance, E, H, V, txt
 
-def apply_transmittance_to_incident_beam(transmittance,p0,e0,h0,v0,
+def apply_transmittance_to_incident_beam(transmittance, p0, e0, h0, v0,
     flags=0,
     hgap=1000.0,
     vgap=1000.0,
@@ -639,7 +728,7 @@ if __name__ == "__main__":
                     defection=1,
                     dens='?',
                     roughness=0.0,
-                    flags=5, # 0 = Filter, 2=Aperture, 5 = Thin object filter
+                    flags=6, # 0 = Filter, 2=Aperture, 5 = Thin object filter, 6=Multilayer
                     hgap=0.2e-3,
                     vgap=0.1e-3,
                     hgapcenter=0.1e-3,
@@ -653,6 +742,7 @@ if __name__ == "__main__":
                     thin_object_thickness_outside_file_area=163e-6,
                     thin_object_back_profile_flag=0, # 0= z=0, 1=Back profile from file z(x,y)
                     thin_object_back_profile_file='/home/srio/Oasys/lens.h5',
+                    multilayer_file='/home/srio/Oasys/multilayerTiC.h5',
                     )
 
     from srxraylib.plot.gol import plot_image, plot

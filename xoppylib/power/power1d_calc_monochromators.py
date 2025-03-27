@@ -26,7 +26,11 @@ def power1d_calc_multilayer_monochromator(filename, energies=numpy.linspace(7900
         np = f["MLayer/parameters/np"][()]
         npair = f["MLayer/parameters/npair"][()]
         thick = numpy.array(f["MLayer/parameters/thick"])
-        x = numpy.array(f["/MLayer/reflectivity-s/x"])
+
+        thetaN = numpy.array(f["MLayer/parameters/thetaN"])
+        energyN = numpy.array(f["MLayer/parameters/energyN"])
+        theta1 = numpy.array(f["MLayer/parameters/theta1"])
+
         f.close()
 
         print("===== data read from file: %s ======" % filename)
@@ -43,7 +47,15 @@ def power1d_calc_multilayer_monochromator(filename, energies=numpy.linspace(7900
         print("np            = ", np            )
         print("npair         = ", npair         )
         print("thick         = ", thick         )
+        print("thetaN        = ", thetaN        )
+        print("theta1        = ", theta1        )
+        print("energyN        = ", energyN      )
         print("=====================================\n\n")
+
+        if energyN <= 1:
+            raise Exception("xoppy/Multilayer must contain an energy scan for a single value of incident angle")
+        if thetaN > 1:
+            raise Exception("xoppy/Multilayer must contain an energy scan for a single value of incident angle")
 
         out = MLayer.initialize_from_bilayer_stack(
             material_S=materialS, density_S=densityS, roughness_S=roughnessS,
@@ -61,7 +73,7 @@ def power1d_calc_multilayer_monochromator(filename, energies=numpy.linspace(7900
         # reflectivity is for amplitude
         rs, rp, e, t = out.scan(h5file="",
                                 energyN=energies.size, energy1=energies[0], energy2=energies[-1],
-                                thetaN=1, theta1=0.2, theta2=6.0)
+                                thetaN=1, theta1=theta1, theta2=theta1 * 1.1)
 
 
     except:

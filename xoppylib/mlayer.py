@@ -528,8 +528,9 @@ class MLayer(object):
     # ! ML reflectivity.
     # !
     def scan(self,h5file="",
-            energyN = 51,energy1 = 5000.0,energy2 = 20000.0,
-            thetaN = 1,theta1 = 0.75,theta2 = 0.75):
+            energyN=51, energy1=5000.0, energy2=20000.0, # in eV
+            thetaN=1, theta1=0.75, theta2=0.75, # in degrees, grazing
+             ):
 
         if self.pre_mlayer_dict is None:
             raise Exception("load preprocessor file before!")
@@ -537,32 +538,31 @@ class MLayer(object):
         # !calculate
         k_what = 1
         if (energyN > 1):
-            energyS = (energy2-energy1)/float(energyN-1)
+            energyS = (energy2 - energy1) / float(energyN - 1)
         else:
             energyS = 0.0
 
         if (thetaN > 1):
-            thetaS = (theta2-theta1)/float(thetaN-1)
+            thetaS = (theta2 - theta1) / float(thetaN - 1)
         else:
             thetaS = 0.0
-
 
         R_S_array = numpy.zeros((energyN,thetaN))
         R_P_array = numpy.zeros_like(R_S_array)
         theta_array = numpy.zeros(thetaN)
         energy_array = numpy.zeros(energyN)
 
-        for i in range(1,1+thetaN):
-            for j in range(1,1+energyN):
+        for i in range(1, 1 + thetaN):
+            for j in range(1, 1 + energyN):
 
-                theta = theta1 + float(i-1) * thetaS
-                energy = energy1+ float(j-1)*energyS
-                sin_ref = numpy.sin ( theta * numpy.pi/180)
+                theta = theta1 + float(i - 1) * thetaS
+                energy = energy1+ float(j - 1) * energyS
+                sin_ref = numpy.sin (theta * numpy.pi/180)
                 wnum = 2 * numpy.pi * energy / tocm
 
                 COS_POLE = 1.0
 
-                R_S,R_P,tmp,phases,phasep = self.reflec(wnum,sin_ref,COS_POLE,k_what)
+                R_S, R_P, tmp, _, phasep = self.reflec(wnum, sin_ref, COS_POLE, k_what)
 
                 R_S_array[j-1,i-1] = R_S
                 R_P_array[j-1,i-1] = R_P
@@ -573,23 +573,24 @@ class MLayer(object):
                     print("------------------------------------------------------------------------")
                     print("Inputs: ")
                     print("   for E=",energy1,"eV: ")
-                    print("   energy [eV]:                       ",energy)
-                    print("   grazing angle [deg]:               ",theta)
-                    print("   wavelength [A]:                    ",(1e0/wnum)*2*numpy.pi*1e8)
-                    print("   wavenumber (2 pi/lambda) [cm^-1]:  ",wnum)
+                    print("   energy [eV]:                       ", energy)
+                    print("   grazing angle [deg]:               ", theta)
+                    print("   wavelength [A]:                    ", (1e0 / wnum) * 2 * numpy.pi * 1e8)
+                    print("   wavenumber (2 pi/lambda) [cm^-1]:  ", wnum)
                     print("Outputs: ")
-                    print("   R_S:                          ",R_S)
-                    print("   R_P:                          ",R_P)
+                    print("   R_S:                          ", R_S)
+                    print("   R_P:                          ", R_P)
                     print("------------------------------------------------------------------------")
 
         if h5file != "":
             h5_initialize = True
-            if True: #try:
+            try:
                 if h5_initialize:
                     h5w = H5SimpleWriter.initialize_file(h5file, creator="xoppy_multilayer.py")
                 else:
                     h5w = H5SimpleWriter(h5file, None)
                 h5_entry_name = "MLayer"
+                # s-pol
                 h5w.create_entry(h5_entry_name,nx_default="reflectivity-s")
                 if energyN == 1:
                     h5w.add_dataset(theta_array, R_S_array[0]**2, dataset_name="reflectivity-s", entry_name=h5_entry_name,
@@ -599,7 +600,20 @@ class MLayer(object):
                                     title_x="Photon energy [eV]", title_y="Reflectivity-s")
                 else:
                     # h5w.create_entry(h5_entry_name, nx_default="EnergyAngleScan")
-                    h5w.add_image(R_S_array**2, energy_array, theta_array, image_name="EnergyAngleScan",
+                    h5w.add_image(R_S_array**2, energy_array, theta_array, image_name="EnergyAngleScan-s",
+                                  entry_name=h5_entry_name,
+                                  title_x="Photon Energy [eV]",
+                                  title_y="Grazing Angle [deg]")
+                # p-pol
+                if energyN == 1:
+                    h5w.add_dataset(theta_array, R_P_array[0]**2, dataset_name="reflectivity-p", entry_name=h5_entry_name,
+                                    title_x="Grazing angle [deg]", title_y="Reflectivity-p")
+                elif thetaN == 1:
+                    h5w.add_dataset(energy_array, R_P_array[:,0]**2, dataset_name="reflectivity-p", entry_name=h5_entry_name,
+                                    title_x="Photon energy [eV]", title_y="Reflectivity-p")
+                else:
+                    # h5w.create_entry(h5_entry_name, nx_default="EnergyAngleScan")
+                    h5w.add_image(R_P_array**2, energy_array, theta_array, image_name="EnergyAngleScan-p",
                                   entry_name=h5_entry_name,
                                   title_x="Photon Energy [eV]",
                                   title_y="Grazing Angle [deg]")
@@ -610,14 +624,88 @@ class MLayer(object):
                         h5w.add_key(key, self.pre_mlayer_dict[key], entry_name=h5_entry_name + "/parameters")
                     except:
                         pass
+                try:
+                    h5w.add_key("energyN", energyN, entry_name=h5_entry_name + "/parameters")
+                    h5w.add_key("energy1", energy1, entry_name=h5_entry_name + "/parameters")
+                    h5w.add_key("energy2", energy2, entry_name=h5_entry_name + "/parameters")
+                    h5w.add_key("thetaN",  thetaN,  entry_name=h5_entry_name + "/parameters")
+                    h5w.add_key("theta1",  theta1,  entry_name=h5_entry_name + "/parameters")
+                    h5w.add_key("theta2",  theta2,  entry_name=h5_entry_name + "/parameters")
+                except:
+                    pass
 
                 print("File written to disk: %s" % h5file)
-            # except:
-            #     raise Exception("ERROR writing h5 file")
+            except:
+                raise Exception("ERROR writing h5 file")
+
+        return R_S_array, R_P_array, energy_array, theta_array
+
+    def scan_energy(self, energy_array, theta1=0.75, h5file="", verbose=1):
+
+        if self.pre_mlayer_dict is None:
+            raise Exception("load preprocessor file before!")
+
+        R_S_array = numpy.zeros_like(energy_array)
+        R_P_array = numpy.zeros_like(energy_array)
+
+        k_what = 1
+        for j, energy in enumerate(energy_array):
+            sin_ref = numpy.sin (theta1 * numpy.pi/180)
+            wnum = 2 * numpy.pi * energy / tocm
+
+            COS_POLE = 1.0
+
+            R_S, R_P, tmp, _, phasep = self.reflec(wnum, sin_ref, COS_POLE, k_what)
+
+            R_S_array[j] = R_S
+            R_P_array[j] = R_P
 
 
-        return R_S_array,R_P_array,energy_array,theta_array
+        if verbose:
+            print("------------------------------------------------------------------------")
+            print("Inputs: ")
+            print("   for E=", energy_array[0], "eV: ")
+            print("   grazing angle [deg]:               ", theta1)
+            wnum = 2 * numpy.pi * energy_array[0] / tocm
+            print("   wavelength [A]:                    ", (1e0 / wnum) * 2 * numpy.pi * 1e8)
+            print("   wavenumber (2 pi/lambda) [cm^-1]:  ", wnum)
+            print("Outputs: ")
+            print("   R_S:                          ", R_S_array[0])
+            print("   R_P:                          ", R_P_array[0])
+            print("------------------------------------------------------------------------")
 
+        if h5file != "":
+            h5_initialize = True
+            try:
+                if h5_initialize:
+                    h5w = H5SimpleWriter.initialize_file(h5file, creator="xoppy_multilayer.py")
+                else:
+                    h5w = H5SimpleWriter(h5file, None)
+                h5_entry_name = "MLayer"
+                # s-pol
+                h5w.create_entry(h5_entry_name,nx_default="reflectivity-s")
+                h5w.add_dataset(energy_array, R_S_array**2, dataset_name="reflectivity-s", entry_name=h5_entry_name,
+                                title_x="Photon energy [eV]", title_y="Reflectivity-s")
+                # p-pol
+                h5w.add_dataset(energy_array, R_P_array**2, dataset_name="reflectivity-p", entry_name=h5_entry_name,
+                                    title_x="Photon energy [eV]", title_y="Reflectivity-p")
+
+                h5w.create_entry("parameters", root_entry=h5_entry_name, nx_default=None)
+                for key in self.pre_mlayer_dict.keys():
+                    try:
+                        h5w.add_key(key, self.pre_mlayer_dict[key], entry_name=h5_entry_name + "/parameters")
+                    except:
+                        pass
+                try:
+                    h5w.add_key("theta1",  theta1,  entry_name=h5_entry_name + "/parameters")
+                except:
+                    pass
+
+                print("File written to disk: %s" % h5file)
+            except:
+                raise Exception("ERROR writing h5 file")
+
+        return R_S_array, R_P_array
 
     def reflec(self,WNUM,SIN_REF,COS_POLE,K_WHAT):
 
@@ -1016,7 +1104,7 @@ if __name__ == "__main__":
     a = MLayer.pre_mlayer(
         interactive=False,
         FILE="pre_mlayer.dat",
-        E_MIN=100.0, E_MAX=500.0,
+        E_MIN=110.0, E_MAX=500.0,
         O_DENSITY=7.19, O_MATERIAL="Cr", #"Water, Liquid", # odd: closer to vacuum
         E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
         S_DENSITY=2.33, S_MATERIAL="Water, Liquid", #"Si",  # substrate
@@ -1041,12 +1129,23 @@ if __name__ == "__main__":
     # energy scan
     #
     rs, rp, e, t = a.scan(h5file="",
-            energyN=100,energy1=300.0,energy2=500.0,
-            thetaN=1,theta1=45.0,theta2=45.0)
+            energyN=100, energy1=300.0, energy2=500.0,
+            thetaN=1, theta1=45.0, theta2=45.0)
 
-    print(rs.shape,rp.shape,e.shape,t.shape)
+    print(rs.shape, rp.shape, e.shape, t.shape)
 
-    plot(e,rs[:,0],xtitle="Photon energy [eV]",ytitle="Reflectivity")
+    plot(e, rs[:,0], xtitle="Photon energy [eV]", ytitle="Reflectivity")
+
+    #
+    # energy scan 2
+    #
+    energy_array = numpy.linspace(300.0, 500.0, 100)
+    rs, rp = a.scan_energy(energy_array, theta1=45.0, h5file="")
+
+    print(rs.shape, rp.shape, energy_array.shape)
+
+    plot(energy_array, rs, xtitle="Photon energy [eV]", ytitle="Reflectivity")
+
 
     #
     # theta scan
@@ -1057,10 +1156,10 @@ if __name__ == "__main__":
 
     print(rs.shape,rp.shape,e.shape,t.shape)
 
-    plot(t,rs[0],xtitle="angle [deg]",ytitle="Reflectivity",ylog=False)
+    plot(t,rs[0], xtitle="angle [deg]", ytitle="Reflectivity", ylog=False)
 
     #
     # single point
     #
     a.scan(h5file="",
-            energyN=1,energy1=398.0,thetaN=1,theta1=45.0)
+            energyN=1, energy1=398.0, thetaN=1, theta1=45.0)
