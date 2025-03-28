@@ -2,7 +2,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2021 European Synchrotron Radiation Facility
+# Copyright (c) 2025 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,7 @@
 
 __authors__ = ["M Sanchez del Rio"]
 __license__ = "MIT"
-__date__ = "2021"
+__date__ = "20212025"
 
 import os
 
@@ -54,7 +54,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.28'
+VERSION = '1.0.29'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'
@@ -97,11 +97,11 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
-    'srxraylib>=1.0.53',
+    'srxraylib',
     'oasys-srwpy',
     'pySRU',
     'h5py',
-    'dabax>=1.0.6',
+    'dabax',
 )
 
 SETUP_REQUIRES = (
@@ -118,7 +118,6 @@ PACKAGE_DATA = {
     "xoppylib": ["data/*"],
     "xoppylib": ["doc_txt/*.*"],
     "xoppylib": ["bin/*"],
-    # "srxraylib.util": ["data/*.*"],
 }
 
 
