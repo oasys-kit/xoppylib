@@ -13,16 +13,17 @@ def List_Product(list):
         l = 1
     return (L)
 
-def xoppy_calc_power_monochromator(energies=None,         # array with energies in eV
-                                   source=None,           # array with source spectral density
-                                   TYPE=0,                # 0=None, 1=Crystal Bragg, 2=Crystal Laue, 3=Multilayer
-                                   ENER_SELECTED=8000.0,  # Energy to set crystal monochromator
-                                   METHOD=0,              # For crystals, in crystalpy, 0=Zachariasem, 1=Guigay
-                                   THICK=1.0,             # crystal thicknes for Laue crystals in um
-                                   ML_H5_FILE="",         # File with inputs from multilaters (from xoppy/Multilayer)
-                                   N_REFLECTIONS=1,       # number of reflections (crystals or multilayers)
-                                   FILE_DUMP=0,           # 0=No, 1=yes
-                                   polarization=0,        # 0=sigma, 1=pi, 2=unpolarized
+def xoppy_calc_power_monochromator(energies=None,                    # array with energies in eV
+                                   source=None,                      # array with source spectral density
+                                   TYPE=0,                           # 0=None, 1=Crystal Bragg, 2=Crystal Laue, 3=Multilayer
+                                   ENER_SELECTED=8000.0,             # Energy to set crystal monochromator
+                                   METHOD=0,                         # For crystals, in crystalpy, 0=Zachariasem, 1=Guigay
+                                   THICK=1.0,                        # crystal thicknes for Laue crystals in um
+                                   ML_H5_FILE="",                    # File with inputs from multilaters (from xoppy/Multilayer)
+                                   ML_GRAZING_ANGLE_DEG=0.4,         # For multilayer, the grazing angle in degrees
+                                   N_REFLECTIONS=1,                  # number of reflections (crystals or multilayers)
+                                   FILE_DUMP=0,                      # 0=No, 1=yes
+                                   polarization=0,                   # 0=sigma, 1=pi, 2=unpolarized
                                    output_file="monochromator.spec", # filename if FILE_DUMP=1
                                    ):
 
@@ -34,13 +35,18 @@ def xoppy_calc_power_monochromator(energies=None,         # array with energies 
     if TYPE == 0:
         Mono_Effect = numpy.array([1] * len(energies))
     elif TYPE == 1:
-        Mono_Effect, Mono_Effect_p = power1d_calc_bragg_monochromator(energies=energies, energy_setup=ENER_SELECTED,
-                                                    calculation_method=METHOD)
+        Mono_Effect, Mono_Effect_p = power1d_calc_bragg_monochromator(energies=energies,
+                                                                      energy_setup=ENER_SELECTED,
+                                                                      calculation_method=METHOD)
     elif TYPE == 2:
-        Mono_Effect, Mono_Effect_p = power1d_calc_laue_monochromator(energies=energies, energy_setup=ENER_SELECTED,
-                                                   calculation_method=METHOD, thickness=THICK * 1e-6)
+        Mono_Effect, Mono_Effect_p = power1d_calc_laue_monochromator(energies=energies,
+                                                                     energy_setup=ENER_SELECTED,
+                                                                     calculation_method=METHOD,
+                                                                     thickness=THICK * 1e-6)
     elif TYPE == 3:
-        Mono_Effect, Mono_Effect_p, _, _ = power1d_calc_multilayer_monochromator(ML_H5_FILE, energies=energies)
+        Mono_Effect, Mono_Effect_p = power1d_calc_multilayer_monochromator(ML_H5_FILE,
+                                                                           energies=energies,
+                                                                           grazing_angle_deg=ML_GRAZING_ANGLE_DEG)
 
 
     if polarization == 0:
@@ -61,22 +67,12 @@ def xoppy_calc_power_monochromator(energies=None,         # array with energies 
     Output = numpy.array(Output)
 
     if FILE_DUMP == 1:
-        # output_file = "monochromator.spec"
         f = open(output_file, 'w')
         f.write("#S 1\n#N 4\n#L Photon energy [eV]  source  monochromator reflectivity  transmitted intensity\n")
         for i in range(Output.shape[1]):
             f.write("%g  %g  %g  %g\n" % (Output[0, i], Output[1, i], Output[2, i], Output[3, i]))
         f.close()
         print("File written to disk: %s" % output_file)
-
-    # # print results
-    # I1 = numpy.trapz(numpy.array(source), x=energies, axis=-1)
-    # I2 = numpy.trapz(numpy.array(Final_Spectrum), x=energies, axis=-1)
-    # txt = "      Incoming power: %f\n" % (I1)
-    # txt += "      Outcoming power: %f\n" % (I2)
-    # txt += "      Absorbed power: %f\n" % (I1 - I2)
-    # txt += "      Normalized Absorbed power: %f\n" % ((I1 - I2) / I1)
-    # print(txt)
 
     #
     # text results
@@ -124,8 +120,6 @@ def xoppy_calc_power_monochromator(energies=None,         # array with energies 
         txt += "      Normalized Outcoming Power: %f\n" % (I2 / I0)
         I1 = I2
 
-###################
-
     outColTitles = ["Photon energy [eV]", "Source", "reflectivity", "Spectral power after monochromator"]
     return {"data": Output, "labels": outColTitles, "info": txt}
 
@@ -133,4 +127,4 @@ if __name__ == "__main__":
     print(xoppy_calc_power_monochromator(TYPE=0))
     print(xoppy_calc_power_monochromator(TYPE=1))
     print(xoppy_calc_power_monochromator(TYPE=2))
-    print(xoppy_calc_power_monochromator(TYPE=3, ML_H5_FILE="/users/srio/Oasys/multilayerTiC.h5"))
+    print(xoppy_calc_power_monochromator(TYPE=3, ML_H5_FILE="/users/srio/Oasys/multilayerTiC.h5", ML_GRAZING_ANGLE_DEG=0.4))
