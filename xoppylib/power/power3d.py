@@ -58,7 +58,7 @@ def calculate_component_absorbance_and_transmittance(
     defection=1, # deflection 0=H 1=V
     dens="?",
     roughness=0.0,
-    flags=0,  # 0=Filter 1=Mirror 2 = Aperture 3 magnifier, 4 screen rotation, 5 thin object filter, 6 multilayer
+    flags=0,  # 0=Filter 1=Mirror 2 = Aperture 3 magnifier, 4 screen rotation, 5 thin object filter, 6 multilayer, 7 External file
     hgap=1000.0,
     vgap=1000.0,
     hgapcenter=0.0,
@@ -73,6 +73,7 @@ def calculate_component_absorbance_and_transmittance(
     thin_object_back_profile_flag=0,
     thin_object_back_profile_file='',
     multilayer_file='',
+    external_reflectivity_file='',
     verbose=1,
     ):
     #
@@ -144,7 +145,12 @@ def calculate_component_absorbance_and_transmittance(
             txt += '      File with thickness for back surface [h5, OASYS-format]: %s \n' % (thin_object_back_profile_file)
     elif flags == 6:
         txt += '      *****   oe  [Multilayer] *************\n'
+        txt += '      File with multilayer parameters from XOPPY/Multilayer [h5]: %s \n' % (multilayer_file)
+        txt += '      grazing angle [mrad]: %f \n' % (angle)
+    elif flags == 7:
+        txt += '      *****   oe  [External Reflectivity File] *************\n'
         txt += '      File with multilayer parameters and incident angle (energy scan) from XOPPY/Multilayer [h5]: %s \n' % (multilayer_file)
+
 
     if flags == 0:  # filter
         for j, energy in enumerate(e):
@@ -390,8 +396,46 @@ def calculate_component_absorbance_and_transmittance(
                     if (((H[i] - hgapcenter) / (hgap / 2)) ** 2 + ((V[j] - vgapcenter) / (vgap / 2)) ** 2) > 1:
                         transmittance[:, i, j] = 0.0
                         absorbance[:, i, j] = 0.0
+
+    elif flags == 7:  # external reflectivity file
+
+        try:
+            a = numpy.loadtxt(external_reflectivity_file)
+            energy0 = a[:, 0]
+            refl0 = a[:, -1]
+            refl = numpy.interp(e, energy0, refl0, left=0, right=0)
+        except:
+            raise Exception("Error extracting reflectivity from file: %s" % external_reflectivity_file)
+
+        if defection == 0:  # horizontally deflecting
+            for j, energy in enumerate(e):
+                transmittance[j, :, :] = refl[j]
+            H = h / numpy.sin(angle * 1e-3)
+        elif defection == 1:  # vertically deflecting
+            for j, energy in enumerate(e):
+                transmittance[j, :, :] = refl[j]
+            V = v / numpy.sin(angle * 1e-3)
+
+        # size
+        absorbance = 1.0 - transmittance
+
+        if gapshape == 0:
+            h_indices_bad = numpy.where(numpy.abs(H - hgapcenter) > (0.5 * hgap))
+            if len(h_indices_bad) > 0:
+                transmittance[:, h_indices_bad, :] = 0.0
+                absorbance[:, h_indices_bad, :] = 0.0
+            v_indices_bad = numpy.where(numpy.abs(V - vgapcenter) > (0.5 * vgap))
+            if len(v_indices_bad) > 0:
+                transmittance[:, :, v_indices_bad] = 0.0
+                absorbance[:, :, v_indices_bad] = 0.0
+        elif gapshape == 1:  # circle
+            for i in range(H.size):
+                for j in range(V.size):
+                    if (((H[i] - hgapcenter) / (hgap / 2)) ** 2 + ((V[j] - vgapcenter) / (vgap / 2)) ** 2) > 1:
+                        transmittance[:, i, j] = 0.0
+                        absorbance[:, i, j] = 0.0
     else:
-        raise NotImplementedError("flags=%d" % flags)
+        raise NotImplementedError("Not implemented option: flags=%d" % flags)
 
     return transmittance, absorbance, E, H, V, txt
 
@@ -728,7 +772,7 @@ if __name__ == "__main__":
                     defection=1,
                     dens='?',
                     roughness=0.0,
-                    flags=6, # 0 = Filter, 2=Aperture, 5 = Thin object filter, 6=Multilayer
+                    flags=6, # 0 = Filter, 2=Aperture, 5 = Thin object filter, 6=Multilayer, 7 External File
                     hgap=0.2e-3,
                     vgap=0.1e-3,
                     hgapcenter=0.1e-3,

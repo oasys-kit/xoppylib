@@ -15,7 +15,7 @@ def List_Product(list):
 
 def xoppy_calc_power_monochromator(energies=None,                    # array with energies in eV
                                    source=None,                      # array with source spectral density
-                                   TYPE=0,                           # 0=None, 1=Crystal Bragg, 2=Crystal Laue, 3=Multilayer
+                                   TYPE=0,                           # 0=None, 1=Crystal Bragg, 2=Crystal Laue, 3=Multilayer, 4=External file
                                    ENER_SELECTED=8000.0,             # Energy to set crystal monochromator
                                    METHOD=0,                         # For crystals, in crystalpy, 0=Zachariasem, 1=Guigay
                                    THICK=1.0,                        # crystal thicknes for Laue crystals in um
@@ -24,6 +24,7 @@ def xoppy_calc_power_monochromator(energies=None,                    # array wit
                                    N_REFLECTIONS=1,                  # number of reflections (crystals or multilayers)
                                    FILE_DUMP=0,                      # 0=No, 1=yes
                                    polarization=0,                   # 0=sigma, 1=pi, 2=unpolarized
+                                   external_reflectivity_file='',    # file with external reflectivity
                                    output_file="monochromator.spec", # filename if FILE_DUMP=1
                                    ):
 
@@ -48,6 +49,15 @@ def xoppy_calc_power_monochromator(energies=None,                    # array wit
                                                                            energies=energies,
                                                                            grazing_angle_deg=ML_GRAZING_ANGLE_DEG)
 
+    elif TYPE == 4:
+        polarization = 0
+        try:
+            a = numpy.loadtxt(external_reflectivity_file)
+            energy0 = a[:, 0]
+            refl0 = a[:, -1]
+            Mono_Effect = numpy.interp(energies, energy0, refl0, left=0, right=0)
+        except:
+            raise Exception("Error extracting reflectivity from file: %s" % external_reflectivity_file)
 
     if polarization == 0:
         Mono_Effect = Mono_Effect ** N_REFLECTIONS
