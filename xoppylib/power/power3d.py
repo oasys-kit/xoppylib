@@ -367,7 +367,7 @@ def calculate_component_absorbance_and_transmittance(
             rs, rp = out.scan_energy(e, theta1=numpy.degrees(angle * 1e-3), h5file="")
 
         except:
-            raise Exception("Error reading file: %s" % filename)
+            raise Exception("Error reading file: %s" % multilayer_file)
 
         if defection == 0:  # horizontally deflecting
             for j, energy in enumerate(e):
