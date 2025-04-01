@@ -335,6 +335,10 @@ def calculate_component_absorbance_and_transmittance(
 
             f.close()
 
+            if isinstance(material1, bytes): material1 = material1.decode("utf-8")
+            if isinstance(material2, bytes): material2 = material2.decode("utf-8")
+            if isinstance(materialS, bytes): materialS = materialS.decode("utf-8")
+
             if verbose:
                 print("===== data read from file: %s ======" % multilayer_file)
                 print("density1      = ", density1)
