@@ -527,6 +527,8 @@ class MLayer(object):
     # ! It can be used for testing pre_mlayer, or for simple calculations of
     # ! ML reflectivity.
     # !
+
+    # result R is in amplitude
     def scan(self,h5file="",
             energyN=51, energy1=5000.0, energy2=20000.0, # in eV
             thetaN=1, theta1=0.75, theta2=0.75, # in degrees, grazing
@@ -578,8 +580,8 @@ class MLayer(object):
                     print("   wavelength [A]:                    ", (1e0 / wnum) * 2 * numpy.pi * 1e8)
                     print("   wavenumber (2 pi/lambda) [cm^-1]:  ", wnum)
                     print("Outputs: ")
-                    print("   R_S:                          ", R_S)
-                    print("   R_P:                          ", R_P)
+                    print("   R_S (ntensity):                          ", numpy.abs(R_S)**2)
+                    print("   R_P (ntensity):                          ", numpy.abs(R_P)**2)
                     print("------------------------------------------------------------------------")
 
         if h5file != "":
@@ -640,7 +642,7 @@ class MLayer(object):
 
         return R_S_array, R_P_array, energy_array, theta_array
 
-    def scan_energy(self, energy_array, theta1=0.75, h5file="", verbose=1):
+    def scan_energy(self, energy_array, theta1=0.75, h5file="", verbose=1):  # result R is in amplitude
 
         if self.pre_mlayer_dict is None:
             raise Exception("load preprocessor file before!")

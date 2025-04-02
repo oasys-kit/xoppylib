@@ -59,15 +59,15 @@ def calculate_component_absorbance_and_transmittance(
     dens="?",
     roughness=0.0,
     flags=0,  # 0=Filter 1=Mirror 2 = Aperture 3 magnifier, 4 screen rotation, 5 thin object filter, 6 multilayer, 7 External file
-    hgap=1000.0,
-    vgap=1000.0,
-    hgapcenter=0.0,
-    vgapcenter=0.0,
-    gapshape=0, # 0=rectangle, 1=circle
+    hgap=1000.0,                             # used if flag in (0, 1, 2, 6, 7)
+    vgap=1000.0,                             # used if flag in (0, 1, 2, 6, 7)
+    hgapcenter=0.0,                          # used if flag in (0, 1, 2, 6, 7)
+    vgapcenter=0.0,                          # used if flag in (0, 1, 2, 6, 7)
+    gapshape=0,     # 0=rectangle, 1=circle  # used if flag in (0, 1, 2, 6, 7)
     hmag=1.0,
     vmag=1.0,
-    hrot=0.0,
-    vrot=0.0,
+    hrot=0.0,       # used if flag in (0, 4, 7)
+    vrot=0.0,       # used if flag in (0, 4, 7)
     thin_object_file='',
     thin_object_thickness_outside_file_area=0.0,
     thin_object_back_profile_flag=0,
@@ -105,37 +105,41 @@ def calculate_component_absorbance_and_transmittance(
 
     txt = ""
 
+    txt_rotation = ""
+    txt_rotation += '      H rotation angle [deg]: %f \n' % (hrot)
+    txt_rotation += '      V rotation angle [deg]: %f \n' % (vrot)
+
+    txt_aperture = ""
+    txt_aperture += '      H gap [mm]: %f \n' % (hgap)
+    txt_aperture += '      V gap [mm]: %f \n' % (vgap)
+    txt_aperture += '      H gap center [mm]: %f \n' % (hgapcenter)
+    txt_aperture += '      V gap center [mm]: %f \n' % (vgapcenter)
+
+
     if flags == 0:
         txt += '      *****   oe  [Filter] *************\n'
         txt += '      Material: %s\n' % (substance)
         txt += '      Density [g/cm^3]: %f \n' % (dens)
         txt += '      thickness [mm] : %f \n' % (thick)
-        txt += '      H gap [mm]: %f \n' % (hgap)
-        txt += '      V gap [mm]: %f \n' % (vgap)
-        txt += '      H gap center [mm]: %f \n' % (hgapcenter)
-        txt += '      V gap center [mm]: %f \n' % (vgapcenter)
-        txt += '      H rotation angle [deg]: %f \n' % (hrot)
-        txt += '      V rotation angle [deg]: %f \n' % (vrot)
+        txt += txt_rotation
+        txt += txt_aperture
     elif flags == 1:
         txt += '      *****   oe  [Mirror] *************\n'
         txt += '      Material: %s\n' % (substance)
         txt += '      Density [g/cm^3]: %f \n' % (dens)
         txt += '      grazing angle [mrad]: %f \n' % (angle)
         txt += '      roughness [A]: %f \n' % (roughness)
+        txt += txt_aperture
     elif flags == 2:
         txt += '      *****   oe  [Aperture] *************\n'
-        txt += '      H gap [mm]: %f \n' % (hgap)
-        txt += '      V gap [mm]: %f \n' % (vgap)
-        txt += '      H gap center [mm]: %f \n' % (hgapcenter)
-        txt += '      V gap center [mm]: %f \n' % (vgapcenter)
+        txt += txt_aperture
     elif flags == 3:
         txt += '      *****   oe  [Magnifier] *************\n'
         txt += '      H magnification: %f \n' % (hmag)
         txt += '      V magnification: %f \n' % (vmag)
     elif flags == 4:
         txt += '      *****   oe  [Screen rotated] *************\n'
-        txt += '      H rotation angle [deg]: %f \n' % (hrot)
-        txt += '      V rotation angle [deg]: %f \n' % (vrot)
+        txt += txt_rotation
     elif flags == 5:
         txt += '      *****   oe  [Thin object filter] *************\n'
         txt += '      File with thickness for front surface [h5, OASYS-format]: %s \n' % (thin_object_file)
@@ -147,10 +151,12 @@ def calculate_component_absorbance_and_transmittance(
         txt += '      *****   oe  [Multilayer] *************\n'
         txt += '      File with multilayer parameters from XOPPY/Multilayer [h5]: %s \n' % (multilayer_file)
         txt += '      grazing angle [mrad]: %f \n' % (angle)
+        txt += txt_aperture
     elif flags == 7:
         txt += '      *****   oe  [External Reflectivity File] *************\n'
         txt += '      File with multilayer parameters and incident angle (energy scan) from XOPPY/Multilayer [h5]: %s \n' % (multilayer_file)
-
+        txt += txt_rotation
+        txt += txt_aperture
 
     if flags == 0:  # filter
         for j, energy in enumerate(e):
@@ -158,8 +164,8 @@ def calculate_component_absorbance_and_transmittance(
             transmittance[j, :, :] = numpy.exp(-tmp * dens * (thick / 10.0))
 
         # rotation
-        H = h / numpy.cos(hrot * numpy.pi / 180)
-        V = v / numpy.cos(vrot * numpy.pi / 180)
+        H = h / numpy.cos(vrot * numpy.pi / 180)
+        V = v / numpy.cos(hrot * numpy.pi / 180)
 
         # aperture
         if gapshape == 0:
@@ -227,8 +233,6 @@ def calculate_component_absorbance_and_transmittance(
                         transmittance[:, i, j] = 0.0
                         absorbance[:, i, j] = 0.0
 
-
-
     elif flags == 2:  # aperture
         if gapshape == 0:
             h_indices_bad = numpy.where(numpy.abs(H - hgapcenter) > (0.5 * hgap))
@@ -252,8 +256,8 @@ def calculate_component_absorbance_and_transmittance(
         absorbance = 1.0 - transmittance
 
     elif flags == 4:  # rotation screen
-        H = h / numpy.cos(hrot * numpy.pi / 180)
-        V = v / numpy.cos(vrot * numpy.pi / 180)
+        H = h / numpy.cos(vrot * numpy.pi / 180)
+        V = v / numpy.cos(hrot * numpy.pi / 180)
 
         absorbance = 1.0 - transmittance
 
@@ -368,18 +372,20 @@ def calculate_component_absorbance_and_transmittance(
                 bilayer_gamma=gamma1[0],
             )
 
-            rs, rp = out.scan_energy(e, theta1=numpy.degrees(angle * 1e-3), h5file="")
+            rs, rp = out.scan_energy(e, theta1=numpy.degrees(angle * 1e-3), h5file="") # result R in aplitude
+            rs = numpy.abs(rs)
+            rp = numpy.abs(rp)
 
         except:
             raise Exception("Error reading file: %s" % multilayer_file)
 
         if defection == 0:  # horizontally deflecting
             for j, energy in enumerate(e):
-                transmittance[j, :, :] = rp[j]
+                transmittance[j, :, :] = rp[j]**2
             H = h / numpy.sin(angle * 1e-3)
         elif defection == 1:  # vertically deflecting
             for j, energy in enumerate(e):
-                transmittance[j, :, :] = rs[j]
+                transmittance[j, :, :] = rs[j]**2
             V = v / numpy.sin(angle * 1e-3)
 
         # size
@@ -411,14 +417,12 @@ def calculate_component_absorbance_and_transmittance(
         except:
             raise Exception("Error extracting reflectivity from file: %s" % external_reflectivity_file)
 
-        if defection == 0:  # horizontally deflecting
-            for j, energy in enumerate(e):
-                transmittance[j, :, :] = refl[j]
-            H = h / numpy.sin(angle * 1e-3)
-        elif defection == 1:  # vertically deflecting
-            for j, energy in enumerate(e):
-                transmittance[j, :, :] = refl[j]
-            V = v / numpy.sin(angle * 1e-3)
+        for j, energy in enumerate(e):
+            transmittance[j, :, :] = refl[j]
+
+        # rotation
+        H = h / numpy.cos(vrot * numpy.pi / 180)
+        V = v / numpy.cos(hrot * numpy.pi / 180)
 
         # size
         absorbance = 1.0 - transmittance
@@ -435,7 +439,7 @@ def calculate_component_absorbance_and_transmittance(
         elif gapshape == 1:  # circle
             for i in range(H.size):
                 for j in range(V.size):
-                    if (((H[i] - hgapcenter) / (hgap / 2)) ** 2 + ((V[j] - vgapcenter) / (vgap / 2)) ** 2) > 1:
+                    if (((H[i] - hgapcenter) / (hgap / 2))  ** 2 + ((V[j] - vgapcenter) / (vgap / 2)) ** 2) > 1:
                         transmittance[:, i, j] = 0.0
                         absorbance[:, i, j] = 0.0
     else:
