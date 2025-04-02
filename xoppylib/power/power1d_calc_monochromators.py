@@ -63,12 +63,12 @@ def power1d_calc_multilayer_monochromator(filename,
             bilayer_thickness=thick[0],
             bilayer_gamma=gamma1[0],
         )
-        rs, rp = out.scan_energy( energies, theta1=grazing_angle_deg, h5file="", verbose=verbose)
+        rs, rp = out.scan_energy( energies, theta1=grazing_angle_deg, h5file="", verbose=verbose) # amplitude R
 
     except:
         raise Exception("Error reading file: %s" % filename)
 
-    return rs, rp
+    return numpy.abs(rs)**2, numpy.abs(rp)**2
 
 
 def power1d_calc_bragg_monochromator(h_miller=1, k_miller=1, l_miller=1,
