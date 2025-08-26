@@ -6,7 +6,7 @@ from srxraylib.sources import srfunc
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 
 from scipy.interpolate import interp1d
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumulative_trapezoid
 import scipy.constants as codata
 
 from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
@@ -414,7 +414,7 @@ def xoppy_calc_wiggler_radiation(
 
 
     try:
-        cumulated_power = cumtrapz(power, energy, initial=0)
+        cumulated_power = cumulative_trapezoid(power, energy, initial=0)
     except:
         cumulated_power = 0.0
     print("Power from integral of spectrum (trapezoid rule): %8.3f W" % (cumulated_power[-1]))

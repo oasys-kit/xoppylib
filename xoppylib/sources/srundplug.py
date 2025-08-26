@@ -1565,8 +1565,8 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
                           zero_emittance=zero_emittance,srw_max_harmonic_number=None,fileName=None,fileAppend=False)
 
         # cs = numpy.cumsum(f)
-        from scipy.integrate import cumtrapz
-        cs = cumtrapz(f,e,initial=0)
+        from scipy.integrate import cumulative_trapezoid
+        cs = cumulative_trapezoid(f,e,initial=0)
 
         cs /= cs[-1]
 

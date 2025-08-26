@@ -96,7 +96,7 @@ CLASSIFIERS = (
 INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
-    'scipy',
+    'scipy>=1.14',
     'srxraylib',
     'oasys-srwpy',
     'pySRU',
