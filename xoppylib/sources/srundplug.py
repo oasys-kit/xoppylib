@@ -1566,9 +1566,9 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
 
         # cs = numpy.cumsum(f)
 
-        try:                from scipy.integrate import cumtrapz
-        except ImportError: from scipy.integrate import cumulative_trapezoid as cumtrapz
-        cs = cumtrapz(f,e,initial=0)
+        try:                from scipy.integrate import cumulative_trapezoid
+        except ImportError: from scipy.integrate import cumtrapz as cumulative_trapezoid
+        cs = cumulative_trapezoid(f, e, initial=0)
 
         cs /= cs[-1]
 
@@ -1584,11 +1584,6 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
         eArray = e1
     else:
         eArray = numpy.linspace(photonEnergyMin, photonEnergyMax, photonEnergyPoints, )
-
-
-
-
-
 
     if zero_emittance:
         eBeam = _srw_electron_beam(E=bl['ElectronEnergy'],Iavg=bl['ElectronCurrent'],) # no emmitance now

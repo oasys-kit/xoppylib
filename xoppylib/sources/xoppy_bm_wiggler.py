@@ -6,8 +6,8 @@ from srxraylib.sources import srfunc
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 
 from scipy.interpolate import interp1d
-try:                from scipy.integrate import cumtrapz
-except ImportError: from scipy.integrate import cumulative_trapezoid as cumtrapz
+try:                from scipy.integrate import cumulative_trapezoid
+except ImportError: from scipy.integrate import cumtrapz as cumulative_trapezoid
 import scipy.constants as codata
 
 from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
@@ -407,17 +407,13 @@ def xoppy_calc_wiggler_radiation(
         elliptical = False,
         polarization = POLARIZATION)
 
-    try:
-        cumulated_power = power.cumsum() * numpy.abs(energy[0] - energy[1])
-    except:
-        cumulated_power = 0.0
+    try:    cumulated_power = power.cumsum() * numpy.abs(energy[0] - energy[1])
+    except: cumulated_power = 0.0
     print("\nPower from integral of spectrum (sum rule): %8.3f W" % (cumulated_power[-1]))
 
 
-    try:
-        cumulated_power = cumtrapz(power, energy, initial=0)
-    except:
-        cumulated_power = 0.0
+    try:    cumulated_power = cumulative_trapezoid(power, energy, initial=0)
+    except: cumulated_power = 0.0
     print("Power from integral of spectrum (trapezoid rule): %8.3f W" % (cumulated_power[-1]))
 
 
