@@ -6,7 +6,8 @@ from srxraylib.sources import srfunc
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 
 from scipy.interpolate import interp1d
-from scipy.integrate import cumtrapz
+try:                from scipy.integrate import cumtrapz
+except ImportError: from scipy.integrate import cumulative_trapezoid as cumtrapz
 import scipy.constants as codata
 
 from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
