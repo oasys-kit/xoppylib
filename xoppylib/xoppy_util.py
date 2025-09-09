@@ -11,7 +11,9 @@ except ImportError:
     pass
 
 
-import xraylib
+try: import xraylib
+except: print("XRAYLIB not available")
+
 import scipy.constants as codata
 
 def package_dirname(package):
