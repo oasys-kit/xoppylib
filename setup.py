@@ -45,7 +45,7 @@ __authors__ = ["M Sanchez del Rio"]
 __license__ = "MIT"
 __date__ = "20212025"
 
-import os
+import os, sys
 
 try:
     from setuptools import find_packages, setup
@@ -54,7 +54,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.35'
+VERSION = '1.0.36'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'
@@ -98,7 +98,6 @@ INSTALL_REQUIRES = (
     'numpy',
     'scipy',
     'srxraylib',
-    'oasys-srwpy',
     'pySRU',
     'h5py',
     'dabax',

@@ -37,14 +37,11 @@ import os
 import sys
 import time
 import array
-import platform
 
 import numpy
 import shutil # to copy files
 
-
 #SRW
-
 USE_URGENT= True
 USE_US = True
 USE_SRWLIB = True
@@ -52,17 +49,13 @@ USE_PYSRU = False
 
 if USE_SRWLIB:
     try:
-        import oasys_srw.srwlib as srwlib
+        import srwpy.srwlib as srwlib # OASYS 2.0
     except:
-        USE_SRWLIB = False
-        print("SRW is not available")
-
-
-#catch standard optput
-try:
-    from io import StringIO  # Python3
-except ImportError:
-    from StringIO import StringIO  # Python2
+        try:
+            import oasys_srw.srwlib as srwlib # OASYS 1.X
+        except:
+            USE_SRWLIB = False
+            print("SRW is not available")
 
 try:
     import matplotlib.pylab as plt
