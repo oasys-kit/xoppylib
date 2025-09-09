@@ -49,7 +49,8 @@ USE_PYSRU = False
 
 if USE_SRWLIB:
     try:
-        import srwpy.srwlib as srwlib # OASYS 2.0
+        try:    import srwpy.srwlib as srwlib # OASYS 2.0 - SRW 4
+        except: import srwlib as srwlib       # SRW 3
     except:
         try:
             import oasys_srw.srwlib as srwlib # OASYS 1.X
