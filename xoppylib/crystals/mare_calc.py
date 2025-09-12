@@ -1,4 +1,6 @@
-import xraylib
+try: import xraylib
+except: print("xraylib is not available.")
+
 import numpy
 import scipy.constants as codata
 from xoppylib.crystals.tools import bragg_metrictensor, lorentz

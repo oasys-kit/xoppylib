@@ -5,7 +5,9 @@
 import numpy
 from dabax.common_tools import calculate_f0_from_f0coeff, atomic_number, atomic_symbols
 
-import xraylib
+try: import xraylib
+except: print("xraylib is not available.")
+
 from dabax.dabax_xraylib import DabaxXraylib
 
 def f0_calc(

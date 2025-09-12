@@ -7,30 +7,28 @@ TODO: vectorization
 
 """
 
-
-__author__ = 'srio'
-
-
 #
 import numpy
 import scipy.constants as codata
 
-tocm = codata.h*codata.c/codata.e*1e2 # 12398.419739640718e-8
-
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
-
 
 from xoppylib.xoppy_xraylib_util import density
 from xoppylib.xoppy_xraylib_util import Refractive_Index_Im_Extended_NIST, Refractive_Index_Re_Extended_NIST
 
+tocm = codata.h*codata.c/codata.e*1e2 # 12398.419739640718e-8
+
+
 class MLayer(object):
 
-    def __init__(self):
+    def __init__(self,
+                 material_constants_library=None):
 
         self.using_pre_mlayer = False
         self.pre_mlayer_dict = None
+        self.material_constants_library = material_constants_library
 
-    def read_preprocessor_file(self,filename):
+    def read_preprocessor_file(self, filename):
 
         out_dict = {}
 
@@ -143,6 +141,7 @@ class MLayer(object):
             out_dict["a3"] = a3
 
         self.pre_mlayer_dict = out_dict
+        self.using_pre_mlayer = True
 
     #
     # this is copied from shadow3 python preprocessors
@@ -155,13 +154,18 @@ class MLayer(object):
                    GRADE_DEPTH=0,N_PAIRS=70,THICKNESS=33.1,GAMMA=0.483,
                    ROUGHNESS_EVEN=3.3,ROUGHNESS_ODD=3.1,
                    FILE_DEPTH="myfile_depth.dat",GRADE_SURFACE=0,FILE_SHADOW="mlayer1.sha",
-                   FILE_THICKNESS="mythick.dat",FILE_GAMMA="mygamma.dat",AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0):
+                   FILE_THICKNESS="mythick.dat",FILE_GAMMA="mygamma.dat",AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0,
+                   material_constants_library=None,
+                   ):
 
         """
          SHADOW preprocessor for multilayers - python+xraylib version
         """
 
-        import xraylib
+        try: import xraylib
+        except: print("xraylib is not available.")
+
+        if material_constants_library is None: material_constants_library = xraylib
 
         # input section
         if interactive:
@@ -323,9 +327,9 @@ class MLayer(object):
             a2 = float(AA2)
             a3 = float(AA3)
 
-        elfactor = numpy.log10(1.0e4/30.0)/300.0
-        istart = int(numpy.log10(estart/30.0e0)/elfactor + 1)
-        ifinal = int(numpy.log10(efinal/30.0e0)/elfactor + 2)
+        elfactor = numpy.log10(1.0e4 / 30.0) / 300.0
+        istart = int(numpy.log10(estart / 30.0e0) / elfactor + 1)
+        ifinal = int(numpy.log10(efinal / 30.0e0) / elfactor + 2)
         np = int(ifinal - istart) + 1
 
 
@@ -340,45 +344,64 @@ class MLayer(object):
 
         ENERGY = numpy.zeros(np)
         for i in range(np):
-            energy = 30e0*numpy.power(10,elfactor*(istart+i-1))
+            energy = 30e0 * numpy.power(10, elfactor * (istart + i - 1))
             f.write("%e " % energy)
             ENERGY[i] = energy
         f.write( "\n")
         pre_mlayer_dict["energy"] = ENERGY
 
-        DELTA = numpy.zeros(np)
-        BETA = numpy.zeros(np)
-        for i in range(np):  #substrate
-            energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
-            delta = 1e0 - Refractive_Index_Re_Extended_NIST(matSubstrate,energy,denSubstrate)
-            beta = Refractive_Index_Im_Extended_NIST(matSubstrate,energy,denSubstrate)
-            DELTA[i] = delta
-            BETA[i] = beta
-            f.write( ("%26.17e "*2+"\n") % tuple([delta,beta]) )
+        vectorized = 1
+
+        # substrate
+        if vectorized:
+            DELTA = 1e0 - Refractive_Index_Re_Extended_NIST(matSubstrate, ENERGY, denSubstrate, material_constants_library=material_constants_library)
+            BETA = Refractive_Index_Im_Extended_NIST(matSubstrate, ENERGY, denSubstrate, material_constants_library=material_constants_library)
+        else:
+            DELTA = numpy.zeros(np)
+            BETA = numpy.zeros(np)
+            for i in range(np):
+                delta = 1e0 - Refractive_Index_Re_Extended_NIST(matSubstrate, ENERGY[i], denSubstrate, material_constants_library=material_constants_library)
+                beta = Refractive_Index_Im_Extended_NIST(matSubstrate, ENERGY[i], denSubstrate, material_constants_library=material_constants_library)
+                DELTA[i] = delta
+                BETA[i] = beta
+
+        for i in range(np):
+            f.write(("%26.17e  " * 2 + "\n") % tuple([DELTA[i], BETA[i]]))
         pre_mlayer_dict["delta_s"] = DELTA
         pre_mlayer_dict["beta_s"] = BETA
 
-        DELTA = numpy.zeros(np)
-        BETA = numpy.zeros(np)
-        for i in range(np): #even
-            energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
-            delta = 1e0 - Refractive_Index_Re_Extended_NIST(matEven,energy,denEven)
-            beta = Refractive_Index_Im_Extended_NIST(matEven,energy,denEven)
-            DELTA[i] = delta
-            BETA[i] = beta
-            f.write( ("%26.17e  "*2+"\n") % tuple([delta,beta]) )
+
+        # even
+        if vectorized:
+            DELTA = 1e0 - Refractive_Index_Re_Extended_NIST(matEven, ENERGY, denEven, material_constants_library=material_constants_library)
+            BETA = Refractive_Index_Im_Extended_NIST(matEven, ENERGY, denEven, material_constants_library=material_constants_library)
+        else:
+            DELTA = numpy.zeros(np)
+            BETA = numpy.zeros(np)
+            for i in range(np):
+                delta = 1e0 - Refractive_Index_Re_Extended_NIST(matEven, ENERGY[i], denEven, material_constants_library=material_constants_library)
+                beta = Refractive_Index_Im_Extended_NIST(matEven, ENERGY[i], denEven, material_constants_library=material_constants_library)
+                DELTA[i] = delta
+                BETA[i] = beta
+        for i in range(np):
+            f.write( ("%26.17e  "*2+"\n") % tuple([DELTA[i], BETA[i]]) )
         pre_mlayer_dict["delta_e"] = DELTA
         pre_mlayer_dict["beta_e"] = BETA
 
-        DELTA = numpy.zeros(np)
-        BETA = numpy.zeros(np)
-        for i in range(np): #odd
-            energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
-            delta = 1e0 - Refractive_Index_Re_Extended_NIST(matOdd,energy,denOdd)
-            beta = Refractive_Index_Im_Extended_NIST(matOdd,energy,denOdd)
-            DELTA[i] = delta
-            BETA[i] = beta
-            f.write( ("%26.17e "*2+"\n") % tuple([delta,beta]) )
+        # odd
+        if vectorized:
+            DELTA = 1e0 - Refractive_Index_Re_Extended_NIST(matOdd, ENERGY, denOdd, material_constants_library=material_constants_library)
+            BETA = Refractive_Index_Im_Extended_NIST(matOdd, ENERGY, denOdd, material_constants_library=material_constants_library)
+        else:
+            DELTA = numpy.zeros(np)
+            BETA = numpy.zeros(np)
+            for i in range(np):
+                delta = 1e0 - Refractive_Index_Re_Extended_NIST(matOdd, ENERGY[i], denOdd, material_constants_library=material_constants_library)
+                beta = Refractive_Index_Im_Extended_NIST(matOdd,ENERGY[i], denOdd, material_constants_library=material_constants_library)
+                DELTA[i] = delta
+                BETA[i] = beta
+        for i in range(np):
+            f.write( ("%26.17e  "*2+"\n") % tuple([DELTA[i], BETA[i]]) )
         pre_mlayer_dict["delta_o"] = DELTA
         pre_mlayer_dict["beta_o"] = BETA
 
@@ -413,7 +436,7 @@ class MLayer(object):
         print("File written to disk: %s" % fileout)
 
 
-        out = MLayer()
+        out = MLayer(material_constants_library=material_constants_library)
         out.pre_mlayer_dict = pre_mlayer_dict
         out.using_pre_mlayer = True
         return out
@@ -427,6 +450,7 @@ class MLayer(object):
             bilayer_pairs=70,
             bilayer_thickness=33.1,
             bilayer_gamma=0.483,
+            material_constants_library=None,
             ):
 
         npair = int(bilayer_pairs)
@@ -475,13 +499,13 @@ class MLayer(object):
         pre_mlayer_dict["densityS"] = density_S
 
         if pre_mlayer_dict["densityS"] is None:
-            pre_mlayer_dict["densityS"] = density(pre_mlayer_dict["materialS"])
+            pre_mlayer_dict["densityS"] = density(pre_mlayer_dict["materialS"], material_constants_library=material_constants_library)
             print("Using density for substrate (%s): %f"%(pre_mlayer_dict["materialS"], pre_mlayer_dict["densityS"]))
         if pre_mlayer_dict["density1"] is None:
-            pre_mlayer_dict["density1"] = density(pre_mlayer_dict["material1"])
+            pre_mlayer_dict["density1"] = density(pre_mlayer_dict["material1"], material_constants_library=material_constants_library)
             print("Using density for layer 1 (even) (%s): %f" % (pre_mlayer_dict["material1"], pre_mlayer_dict["density1"]))
         if pre_mlayer_dict["density2"] is None:
-            pre_mlayer_dict["density2"] = density(pre_mlayer_dict["material2"])
+            pre_mlayer_dict["density2"] = density(pre_mlayer_dict["material2"], material_constants_library=material_constants_library)
             print("Using density for layer 2 (odd) (%s): %f" % (pre_mlayer_dict["material2"], pre_mlayer_dict["density2"]))
 
         if isinstance(pre_mlayer_dict["densityS"],str):
@@ -510,7 +534,7 @@ class MLayer(object):
             pre_mlayer_dict["a3"] = None
 
         # return
-        out = MLayer()
+        out = MLayer(material_constants_library=material_constants_library)
         out.pre_mlayer_dict = pre_mlayer_dict
         out.using_pre_mlayer = False
         return out
@@ -529,7 +553,7 @@ class MLayer(object):
     # !
 
     # result R is in amplitude
-    def scan(self,h5file="",
+    def scan(self, h5file="",
             energyN=51, energy1=5000.0, energy2=20000.0, # in eV
             thetaN=1, theta1=0.75, theta2=0.75, # in degrees, grazing
              ):
@@ -709,7 +733,7 @@ class MLayer(object):
 
         return R_S_array, R_P_array
 
-    def reflec(self,WNUM,SIN_REF,COS_POLE,K_WHAT):
+    def reflec(self, WNUM, SIN_REF, COS_POLE, K_WHAT):
 
         # ! C+++
         # ! C	SUBROUTINE	REFLEC
@@ -844,13 +868,13 @@ class MLayer(object):
             BETE  =  BETA_E[index1] + ( BETA_E[index1+1] -  BETA_E[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
             DELO  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
             BETO  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
-        else: # not using preprocessor, using xraylib
-            DELS  = 1.0 - Refractive_Index_Re_Extended_NIST(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER,self.pre_mlayer_dict["densityS"])
-            BETS  =       Refractive_Index_Im_Extended_NIST(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER,self.pre_mlayer_dict["densityS"])
-            DELE  = 1.0 - Refractive_Index_Re_Extended_NIST(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density1"])
-            BETE  =       Refractive_Index_Im_Extended_NIST(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density1"])
-            DELO  = 1.0 - Refractive_Index_Re_Extended_NIST(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density2"])
-            BETO  =       Refractive_Index_Im_Extended_NIST(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density2"])
+        else: # not using preprocessor, using xraylib or dabax
+            DELS  = 1.0 - Refractive_Index_Re_Extended_NIST(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["densityS"], material_constants_library=self.material_constants_library)
+            BETS  =       Refractive_Index_Im_Extended_NIST(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["densityS"], material_constants_library=self.material_constants_library)
+            DELE  = 1.0 - Refractive_Index_Re_Extended_NIST(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density1"], material_constants_library=self.material_constants_library)
+            BETE  =       Refractive_Index_Im_Extended_NIST(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density1"], material_constants_library=self.material_constants_library)
+            DELO  = 1.0 - Refractive_Index_Re_Extended_NIST(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density2"], material_constants_library=self.material_constants_library)
+            BETO  =       Refractive_Index_Im_Extended_NIST(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density2"], material_constants_library=self.material_constants_library)
 
 
 
@@ -884,15 +908,15 @@ class MLayer(object):
         #
         #
 
-        R_S,R_P,PHASES,PHASEP = self.fresnel(TFACT,GFACT,NPAIR,SIN_REF,COS_POLE,XLAM,
-                                             DELO,DELE,DELS,BETO,BETE,BETS,t_o,t_e,mlroughness1,mlroughness2)
+        R_S, R_P, PHASES, PHASEP = self.fresnel(TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
+                                             DELO, DELE, DELS, BETO, BETE, BETS, t_o, t_e, mlroughness1, mlroughness2)
 
-        return R_S,R_P,0,phases,phasep
+        return R_S, R_P, 0, phases, phasep
 
 
 
-    def fresnel(self,TFACT,GFACT,NPAIR,SIN_REF,COS_POLE,XLAM,
-                delo,dele,dels,beto,bete,bets,t_o,t_e,mlroughness1,mlroughness2):
+    def fresnel(self, TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
+                delo, dele, dels, beto, bete, bets, t_o, t_e, mlroughness1, mlroughness2):
 
         # !C------------------------------------------------------------------------------
         # !C  subroutine FRESNEL
@@ -1099,69 +1123,145 @@ class MLayer(object):
 
 
 if __name__ == "__main__":
-
+    from dabax.dabax_xraylib import DabaxXraylib
     from srxraylib.plot.gol import plot
 
+    if 1:
+        a = MLayer.pre_mlayer(
+            interactive=False,
+            FILE="pre_mlayer.dat",
+            E_MIN=110.0, E_MAX=500.0,
+            O_DENSITY=7.19, O_MATERIAL="Cr", #"Water, Liquid", # odd: closer to vacuum
+            E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
+            S_DENSITY=2.33, S_MATERIAL="Water, Liquid", #"Si",  # substrate
+            GRADE_DEPTH=0,
+            N_PAIRS=50,
+            THICKNESS=22.0,
+            GAMMA=10.0/22.0,  #  gamma ratio  =  t(even) / (t(odd) + t(even))")
+            ROUGHNESS_EVEN=0.0,
+            ROUGHNESS_ODD=0.0,
+            FILE_DEPTH="myfile_depth.dat",
+            GRADE_SURFACE=0,
+            FILE_SHADOW="mlayer1.sha",
+            FILE_THICKNESS="mythick.dat",
+            FILE_GAMMA="mygamma.dat",
+            AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0,
+            material_constants_library=DabaxXraylib())
 
-    a = MLayer.pre_mlayer(
-        interactive=False,
-        FILE="pre_mlayer.dat",
-        E_MIN=110.0, E_MAX=500.0,
-        O_DENSITY=7.19, O_MATERIAL="Cr", #"Water, Liquid", # odd: closer to vacuum
-        E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
-        S_DENSITY=2.33, S_MATERIAL="Water, Liquid", #"Si",  # substrate
-        GRADE_DEPTH=0,
-        N_PAIRS=50,
-        THICKNESS=22.0,
-        GAMMA=10.0/22.0,  #  gamma ratio  =  t(even) / (t(odd) + t(even))")
-        ROUGHNESS_EVEN=0.0,
-        ROUGHNESS_ODD=0.0,
-        FILE_DEPTH="myfile_depth.dat",
-        GRADE_SURFACE=0,
-        FILE_SHADOW="mlayer1.sha",
-        FILE_THICKNESS="mythick.dat",
-        FILE_GAMMA="mygamma.dat",
-        AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0)
+        #
+        # energy scan
+        #
+        rs, rp, e, t = a.scan(h5file="",
+                energyN=100, energy1=300.0, energy2=500.0,
+                thetaN=1, theta1=45.0, theta2=45.0)
 
-    b = MLayer()
-    b.read_preprocessor_file("pre_mlayer.dat")
+        print(rs.shape, rp.shape, e.shape, t.shape)
+
+        plot(e, rs[:,0], xtitle="Photon energy [eV]", ytitle="Reflectivity")
+
+        #
+        # energy scan 2
+        #
+        energy_array = numpy.linspace(300.0, 500.0, 100)
+        rs, rp = a.scan_energy(energy_array, theta1=45.0, h5file="")
+
+        print(rs.shape, rp.shape, energy_array.shape)
+
+        plot(energy_array, rs, xtitle="Photon energy [eV]", ytitle="Reflectivity")
+
+
+        #
+        # theta scan
+        #
+        rs, rp, e, t = a.scan(h5file="",
+                energyN=1,energy1=400.0,energy2=401.0,
+                thetaN=1000,theta1=40.0,theta2=50.0)
+
+        print(rs.shape,rp.shape,e.shape,t.shape)
+
+        plot(t,rs[0], xtitle="angle [deg]", ytitle="Reflectivity", ylog=False)
+
+        #
+        # single point
+        #
+        a.scan(h5file="",
+                energyN=1, energy1=398.0, thetaN=1, theta1=45.0)
 
 
     #
-    # energy scan
+    # read preprocessor file
     #
-    rs, rp, e, t = a.scan(h5file="",
-            energyN=100, energy1=300.0, energy2=500.0,
-            thetaN=1, theta1=45.0, theta2=45.0)
+    if 1:
+        import xraylib
 
-    print(rs.shape, rp.shape, e.shape, t.shape)
+        MLayer.pre_mlayer(
+            interactive=False,
+            FILE="pre_mlayer.dat",
+            E_MIN=110.0, E_MAX=500.0,
+            O_DENSITY=7.19, O_MATERIAL="Cr",  # "Water, Liquid", # odd: closer to vacuum
+            E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
+            S_DENSITY=2.33, S_MATERIAL="Water, Liquid",  # "Si",  # substrate
+            GRADE_DEPTH=0,
+            N_PAIRS=50,
+            THICKNESS=22.0,
+            GAMMA=10.0 / 22.0,  # gamma ratio  =  t(even) / (t(odd) + t(even))")
+            ROUGHNESS_EVEN=0.0,
+            ROUGHNESS_ODD=0.0,
+            FILE_DEPTH="myfile_depth.dat",
+            GRADE_SURFACE=0,
+            FILE_SHADOW="mlayer1.sha",
+            FILE_THICKNESS="mythick.dat",
+            FILE_GAMMA="mygamma.dat",
+            AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0,
+            material_constants_library=DabaxXraylib())
 
-    plot(e, rs[:,0], xtitle="Photon energy [eV]", ytitle="Reflectivity")
+        b = MLayer()
+        b.read_preprocessor_file("pre_mlayer.dat")
+
+        rs, rp, e, t = b.scan(h5file="",
+                energyN=1,energy1=400.0,energy2=401.0,
+                thetaN=1000,theta1=40.0,theta2=50.0)
+
+        plot(t,rs[0], title="From preprocessor file", xtitle="angle [deg]", ytitle="Reflectivity", ylog=False)
 
     #
-    # energy scan 2
     #
-    energy_array = numpy.linspace(300.0, 500.0, 100)
-    rs, rp = a.scan_energy(energy_array, theta1=45.0, h5file="")
-
-    print(rs.shape, rp.shape, energy_array.shape)
-
-    plot(energy_array, rs, xtitle="Photon energy [eV]", ytitle="Reflectivity")
-
-
     #
-    # theta scan
-    #
-    rs, rp, e, t = a.scan(h5file="",
-            energyN=1,energy1=400.0,energy2=401.0,
-            thetaN=1000,theta1=40.0,theta2=50.0)
 
-    print(rs.shape,rp.shape,e.shape,t.shape)
+    if 0:  #TODO: the scan without preprocessor file is very slow with dabax...
+        import xraylib
+        from xoppylib.mlayer import MLayer
 
-    plot(t,rs[0], xtitle="angle [deg]", ytitle="Reflectivity", ylog=False)
+        out = MLayer.initialize_from_bilayer_stack(
+            material_S="Si", density_S=2.33, roughness_S=0.0,
+            material_E="W", density_E=19.3, roughness_E=0.0,
+            material_O="Si", density_O=2.33, roughness_O=0.0,
+            bilayer_pairs=50,
+            bilayer_thickness=50.0,
+            bilayer_gamma=0.5,
+            material_constants_library=DabaxXraylib(),
+        )
 
-    #
-    # single point
-    #
-    a.scan(h5file="",
-            energyN=1, energy1=398.0, thetaN=1, theta1=45.0)
+        for key in out.pre_mlayer_dict.keys():
+            print(key, out.pre_mlayer_dict[key])
+        # reflectivity is for amplitude
+        rs, rp, e, t = out.scan(h5file="",
+                                energyN=1, energy1=8050.0, energy2=15000.0,
+                                thetaN=60, theta1=0.0, theta2=6.0)
+
+        #
+        # plot (example)
+        #
+        if True:
+            myscan = 0
+            from srxraylib.plot.gol import plot, plot_image
+
+            if myscan == 0:  # angle scan
+                plot(t, rs[0] ** 2, xtitle="angle [deg]", ytitle="Reflectivity-s", title="")
+            elif myscan == 1:  # energy scan
+                plot(e, rs[:, 0] ** 2, xtitle="Photon energy [eV]", ytitle="Reflectivity-s", title="")
+            elif myscan == 2:  # double scan
+                plot_image(rs ** 2, e, t, xtitle="Photon energy [eV]", ytitle="Grazing angle [deg]", title="Reflectivity-s",
+                           aspect="auto")
+
+

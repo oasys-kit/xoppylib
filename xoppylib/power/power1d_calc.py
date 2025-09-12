@@ -4,7 +4,10 @@ import scipy.constants as codata
 from xoppylib.xoppy_xraylib_util import descriptor_kind_index, density
 from xoppylib.scattering_functions.fresnel import reflectivity_fresnel
 
-import xraylib # using: CS_Total_CP Refractive_Index_Re Refractive_Index_Im
+# using: CS_Total_CP Refractive_Index_Re Refractive_Index_Im
+try: import xraylib
+except: print("xraylib is not available.")
+
 from dabax.dabax_xraylib import DabaxXraylib
 
 def power1d_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(100),

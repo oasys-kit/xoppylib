@@ -1,5 +1,8 @@
 import numpy
-import xraylib
+
+try: import xraylib
+except: print("xraylib is not available.")
+
 import scipy.constants as codata
 
 # needed by bragg_calc

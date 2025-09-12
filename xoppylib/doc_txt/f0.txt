@@ -4,7 +4,7 @@
 
  f0 calculates Elastic Photon-Atom Scattering versus x=sin(theta/2)/lambda.
 
- The data are taken from the XRAYLIB data base.
+ The data are taken from the XRAYLIB or DABAX data base.
 
 This is a description of the input parameters for f0
 ====================================================

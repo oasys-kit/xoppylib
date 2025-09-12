@@ -26,7 +26,7 @@
 		        f1f2 that only uses photoelectron cross section).
 
 
- The data are taken from the XRAYLIB data base.
+ The data are taken from the XRAYLIB or DABAX data base.
 
  Possible calculations:
 	       f1

@@ -4,7 +4,7 @@
  Power calculates the transmission in terms of flux or spectral power energy
  as a function of photon energy for a set of up to five attenuators and mirrors.
 
- It uses the XRAYLIB library to calculate reflectivities and transmissions.
+ It uses the XRAYLIB or DABAX library to calculate reflectivities and transmissions.
 
 
  Input parameters for POWER

@@ -5,7 +5,9 @@ import os
 import numpy
 import scipy.constants as codata
 import h5py
-import xraylib
+
+try: import xraylib
+except: print("xraylib is not available.")
 
 from xoppylib.scattering_functions.fresnel import reflectivity_fresnel
 from xoppylib.xoppy_xraylib_util import nist_compound_list, density

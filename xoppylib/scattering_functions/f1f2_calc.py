@@ -3,7 +3,9 @@ import scipy.constants as codata
 
 from xoppylib.scattering_functions.fresnel import interface_reflectivity
 
-import xraylib
+try: import xraylib
+except: print("xraylib is not available.")
+
 from dabax.dabax_xraylib import DabaxXraylib
 
 
@@ -366,7 +368,6 @@ def f1f2_calc_nist(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.
     delta = k * f1
     beta = k * f2
     mu = 4.0 * numpy.pi * beta / wavelength
-
     if F == 3: return delta
     if F == 4: return beta
     if F == 5: return mu

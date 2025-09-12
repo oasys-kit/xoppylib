@@ -1,7 +1,9 @@
 #
 # xraylib decorated with xoppy functions
 #
-import xraylib
+try: import xraylib
+except: print("xraylib is not available.")
+
 from xoppylib.decorators.xoppy_decorator import XoppyDecorator
 
 

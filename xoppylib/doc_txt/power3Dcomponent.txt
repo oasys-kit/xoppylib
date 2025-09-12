@@ -5,7 +5,7 @@
  as a function of the spatial coordinates and energies.
  It should be wired to a "Undulator Radiation" widget or use an input file created by it.
 
- It uses the XRAYLIB library to calculate reflectivities and transmissions.
+ It uses the XRAYLIB or DABAX library to calculate reflectivities and transmissions.
 
  The idea is that power3Dcomponent projects the source as calculated by "Undulator Radiation"
  on a mirror or filter and computes the transmittance and absorbance (functions of the photon energy).

@@ -10,9 +10,9 @@
 .
  The mlayer code has been witten by J.H. Underwood at CXRO and is part of the 
  SHADOW package. M. Sanchez del Rio has modified it to directly call 
- an optical library, which gives correct values of refraction indeces when the 
- energy is scanned.  The XOPPY interface prepares a file containg using XRAYLIB\
- containg this information
+ an optical library, which gives correct values of refraction indices when the
+ energy is scanned.  The XOPPY interface prepares a file containg using XRAYLIB
+ or DABAX.
 
  Schematic representation of the multilayer:
 

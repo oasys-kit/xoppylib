@@ -2,7 +2,9 @@
 # material constants libraries (dabax and xraylib) decorated with xoppy functions
 #
 from dabax.dabax_xraylib import DabaxXraylib
-import xraylib
+
+try: import xraylib
+except: print("xraylib is not available.")
 
 from xoppylib.crystals.tools import bragg_calc2, bragg_calc, crystal_fh, mare_calc
 from xoppylib.scattering_functions import f0_calc

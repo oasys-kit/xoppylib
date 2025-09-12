@@ -12,7 +12,7 @@ except ImportError:
 
 
 try: import xraylib
-except: print("XRAYLIB not available")
+except: print("xraylib not available")
 
 import scipy.constants as codata
 

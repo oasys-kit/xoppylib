@@ -1,7 +1,9 @@
 import numpy
 import scipy.constants as codata
 
-import xraylib
+try: import xraylib
+except: print("xraylib is not available.")
+
 from dabax.dabax_xraylib import DabaxXraylib
 
 def cross_calc(descriptor, energy, calculate=0, unit=None, density=None, verbose=True,
@@ -231,14 +233,13 @@ def cross_calc_nist(descriptor, energy, calculate=0, unit=None, verbose=True,
         tmp2 = numpy.zeros_like(energy)
 
     if calculate == 0:
-        for i,ienergy in enumerate(energy):
-            if isinstance(material_constants_library, DabaxXraylib):
-                tmp = material_constants_library.CSb_Total_CP(descriptor, 1e-3 * energy)
-                tmp2 = material_constants_library.CS_Total_CP(descriptor, 1e-3 * energy)
-            else:
-                for i, ienergy in enumerate(energy):
-                    tmp[i] = material_constants_library.CSb_Total_CP(descriptor, 1e-3 * ienergy)
-                    tmp2[i] = material_constants_library.CS_Total_CP(descriptor, 1e-3 * ienergy)
+        if isinstance(material_constants_library, DabaxXraylib):
+            tmp = material_constants_library.CSb_Total_CP(descriptor, 1e-3 * energy)
+            tmp2 = material_constants_library.CS_Total_CP(descriptor, 1e-3 * energy)
+        else:
+            for i, ienergy in enumerate(energy):
+                tmp[i] = material_constants_library.CSb_Total_CP(descriptor, 1e-3 * ienergy)
+                tmp2[i] = material_constants_library.CS_Total_CP(descriptor, 1e-3 * ienergy)
     elif calculate == 1:
         if isinstance(material_constants_library, DabaxXraylib):
             tmp = material_constants_library.CSb_Photo_CP(descriptor, 1e-3 * energy)

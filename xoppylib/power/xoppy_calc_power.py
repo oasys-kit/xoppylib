@@ -48,5 +48,9 @@ def xoppy_calc_power(
     return out_dictionary
 
 if __name__ == "__main__":
-    import xraylib
+    try:
+        import xraylib
+    except:
+        print("xraylib is not available.")
+
     print(xoppy_calc_power(material_constants_library=xraylib))

@@ -4,7 +4,7 @@
 
  XFH calculates structure factor of crystals.
 
- The data are taken from the XRAYLIB data base.
+ The data are taken from the XRAYLIB or DABAX data base.
 
 
 This is a description of the input parameters for fh
