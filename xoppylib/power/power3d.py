@@ -105,7 +105,7 @@ def calculate_component_absorbance_and_transmittance(
         try:  # apply written value
             rho = float(dens)
         except:  # in case of ?
-            rho = density(substance)
+            rho = density(substance, material_constants_library=material_constants_library)
             print("Density for %s: %g g/cm3" % (substance, rho))
         dens = rho
 

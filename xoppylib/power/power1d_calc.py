@@ -32,14 +32,14 @@ def power1d_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(
     nelem = len(substance)
 
     for i in range(nelem):
-        kind = descriptor_kind_index(substance[i])
+        kind = descriptor_kind_index(substance[i], material_constants_library=material_constants_library)
         if kind == -1:
             raise Exception("Bad descriptor/formula: %s"%substance[i])
 
         try:
             rho = float(dens[i])
         except:
-            rho = density(substance[i])
+            rho = density(substance[i], material_constants_library=material_constants_library)
 
 
         print("Density for %s: %g g/cm3"%(substance[i],rho))

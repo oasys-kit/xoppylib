@@ -54,11 +54,11 @@ def density(descriptor, material_constants_library=None):
     if material_constants_library is None: material_constants_library=xraylib
     kind = descriptor_kind_index(descriptor, material_constants_library=material_constants_library)
     if kind == 0:
-        return density_element(descriptor)
+        return density_element(descriptor, material_constants_library=material_constants_library)
     elif kind == 1:
         raise Exception("cannot retrieve density for a compound (%s): it must be defined by user" % descriptor)
     elif kind == 2:
-        return density_nist(descriptor)
+        return density_nist(descriptor, material_constants_library=material_constants_library)
     else:
         raise Exception("Unknown descriptor: %s" % descriptor)
 

@@ -101,6 +101,7 @@ INSTALL_REQUIRES = (
     'pySRU',
     'h5py',
     'dabax',
+    'crystalpy',
 )
 
 SETUP_REQUIRES = (
