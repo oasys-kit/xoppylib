@@ -11,13 +11,13 @@ def create_bragg_preprocessor_file_v1(interactive=True,
         DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1, TEMPERATURE_FACTOR=1.0,
         E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0,
         SHADOW_FILE="bragg.dat",
-        material_constants_library=xraylib):
+        material_constants_library=None):
 
     """
      SHADOW preprocessor for crystals - python+xraylib version
 
      -"""
-
+    if material_constants_library is None: material_constants_library = xraylib
     # codata_e2_mc2 = 2.81794032e-15 = Classical electron radius in S.I.
     codata_e2_mc2 = codata.hbar * codata.alpha / codata.m_e / codata.c
 

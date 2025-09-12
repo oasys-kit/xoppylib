@@ -586,7 +586,7 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
                 fileout=None,
                 do_not_prototype=0, # 0=use site groups (recommended), 1=use all individual sites
                 verbose=True,
-                material_constants_library=xraylib,
+                material_constants_library=None,
                 ):
     """
     Preprocessor for Structure Factor (FH) calculations. It calculates the basic ingredients of FH.
@@ -627,6 +627,9 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
     dict
         a dictionary with all ingredients of the structure factor.
     """
+
+    if material_constants_library is None: material_constants_library = xraylib
+
     output_dictionary = {}
 
     codata_e2_mc2 = codata.e ** 2 / codata.m_e / codata.c ** 2 / (4 * numpy.pi * codata.epsilon_0)  # in m
@@ -960,7 +963,7 @@ def TemperFactor(sinTheta_lambda, anisos, Miller={'h':1,'k':1,'l':1}, cell={'a':
     return results
 
 def mare_calc(descriptor, H, K, L, HMAX, KMAX, LMAX, FHEDGE, DISPLAY, lambda1, deltalambda, PHI, DELTAPHI,
-              material_constants_library=xraylib,verbose=0):
+              material_constants_library=None,verbose=0):
     """
     Calculates:
 
@@ -1038,6 +1041,8 @@ def mare_calc(descriptor, H, K, L, HMAX, KMAX, LMAX, FHEDGE, DISPLAY, lambda1, d
         A script to create the plots.
 
     """
+
+    if material_constants_library is None: material_constants_library = xraylib
 
     list_of_scripts = []
 
@@ -1454,7 +1459,7 @@ def mare_calc(descriptor, H, K, L, HMAX, KMAX, LMAX, FHEDGE, DISPLAY, lambda1, d
 def calc_temperature_factor(temperature, crystal='Si', debyeTemperature=644.92,
                             millerIndex=[1, 1, 1], atomicMass=28.09,
                             dSpacing=3.1354162886330583,
-                            material_constants_library=xraylib
+                            material_constants_library=None
                           ):
     """
     Calculates the (Debye) temperature factor for single crystals. See [1]_, [2]_.
@@ -1506,6 +1511,7 @@ def calc_temperature_factor(temperature, crystal='Si', debyeTemperature=644.92,
     #     >>> calc_temperature_factor(80, crystal='Si', millerIndex=[1,1,1], debyeTemperature=644.92, atomicMass=28.09, dSpacing=3.1354163)
     #     0.9955698950510736
 
+    if material_constants_library is None: material_constants_library = xraylib
 
     def debyeFunc(x):
         return x / (numpy.exp(-x) - 1)
