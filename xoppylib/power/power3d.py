@@ -6,6 +6,7 @@ import numpy
 import scipy.constants as codata
 import h5py
 
+from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
 except: print("xraylib is not available.")
 
@@ -77,7 +78,10 @@ def calculate_component_absorbance_and_transmittance(
     multilayer_file='',
     external_reflectivity_file='',
     verbose=1,
+    material_constants_library=None,
     ):
+
+    if material_constants_library is None: material_constants_library = xraylib
     #
     # important: the transmittance calculated here is referred on axes perp to the beam
     # therefore they do not include geometrical corrections for correct integral
@@ -162,7 +166,7 @@ def calculate_component_absorbance_and_transmittance(
 
     if flags == 0:  # filter
         for j, energy in enumerate(e):
-            tmp = xraylib.CS_Total_CP(substance, energy / 1000.0)
+            tmp = material_constants_library.CS_Total_CP(substance, energy / 1000.0)
             transmittance[j, :, :] = numpy.exp(-tmp * dens * (thick / 10.0))
 
         # rotation
@@ -189,7 +193,7 @@ def calculate_component_absorbance_and_transmittance(
         tmp = numpy.zeros(e.size)
 
         for j, energy in enumerate(e):
-            tmp[j] = xraylib.Refractive_Index_Re(substance, energy / 1000.0, dens)
+            tmp[j] = material_constants_library.Refractive_Index_Re(substance, energy / 1000.0, dens)
 
         if tmp[0] == 0.0:
             raise Exception("Probably the substrance %s is wrong" % substance)
@@ -198,7 +202,7 @@ def calculate_component_absorbance_and_transmittance(
         beta = numpy.zeros(e.size)
 
         for j, energy in enumerate(e):
-            beta[j] = xraylib.Refractive_Index_Im(substance, energy / 1000.0, dens)
+            beta[j] = material_constants_library.Refractive_Index_Im(substance, energy / 1000.0, dens)
 
         try:
             (rs, rp, runp) = reflectivity_fresnel(refraction_index_beta=beta, refraction_index_delta=delta, \
@@ -312,7 +316,7 @@ def calculate_component_absorbance_and_transmittance(
         thick_interpolated = numpy.abs(thick_interpolated - thick_interpolated_back)
 
         for j, energy in enumerate(e):
-            tmp = xraylib.CS_Total_CP(substance, energy / 1000.0)
+            tmp = material_constants_library.CS_Total_CP(substance, energy / 1000.0)
             transmittance[j, :, :] = numpy.exp(-tmp * dens * (thick_interpolated[:, :] / 10.0))
 
         absorbance = 1.0 - transmittance

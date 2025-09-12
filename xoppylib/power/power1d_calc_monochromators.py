@@ -3,17 +3,22 @@ import h5py
 
 from crystalpy.diffraction.GeometryType import BraggDiffraction, LaueDiffraction
 from crystalpy.diffraction.DiffractionSetupXraylib import DiffractionSetupXraylib
+from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
 from crystalpy.diffraction.Diffraction import Diffraction
 from crystalpy.util.Vector import Vector
 from crystalpy.util.Photon import Photon
 
 from xoppylib.mlayer import MLayer
 
+try: import xraylib
+except: print("xraylib not available")
+from dabax.dabax_xraylib import DabaxXraylib
+
 def power1d_calc_multilayer_monochromator(filename,
                                           energies=numpy.linspace(7900, 8100, 200),
                                           grazing_angle_deg=0.4,
+                                          material_constants_library=None,
                                           verbose=1):
-
     try:
         f = h5py.File(filename, 'r')
         density1 = f["MLayer/parameters/density1"][()]
@@ -62,6 +67,7 @@ def power1d_calc_multilayer_monochromator(filename,
             bilayer_pairs=np,
             bilayer_thickness=thick[0],
             bilayer_gamma=gamma1[0],
+            material_constants_library=material_constants_library,
         )
         rs, rp = out.scan_energy( energies, theta1=grazing_angle_deg, h5file="", verbose=verbose) # amplitude R
 
@@ -73,20 +79,35 @@ def power1d_calc_multilayer_monochromator(filename,
 
 def power1d_calc_bragg_monochromator(h_miller=1, k_miller=1, l_miller=1,
                         energy_setup=8000.0, energies=numpy.linspace(7900, 8100, 200),
-                        calculation_method=0):
+                        calculation_method=0,
+                        crystal_descriptor="Si",
+                        material_constants_library=None):
 
     r = numpy.zeros_like(energies)
     r_p = numpy.zeros_like(energies)
     harmonic = 1
 
-    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
-                                           crystal_name="Si",  # string
-                                           thickness=1,        # meters
-                                           miller_h=harmonic * h_miller,  # int
-                                           miller_k=harmonic * k_miller,  # int
-                                           miller_l=harmonic * l_miller,  # int
-                                           asymmetry_angle=0,    # radians
-                                           azimuthal_angle=0.0)  # radians
+    if material_constants_library is None: material_constants_library = xraylib
+
+    if isinstance(material_constants_library, DabaxXraylib):
+        diffraction_setup_r = DiffractionSetupDabax(geometry_type=BraggDiffraction(),  # GeometryType object
+                                                      crystal_name=crystal_descriptor,  # string
+                                                      thickness=1,  # meters
+                                                      miller_h=harmonic * h_miller,  # int
+                                                      miller_k=harmonic * k_miller,  # int
+                                                      miller_l=harmonic * l_miller,  # int
+                                                      asymmetry_angle=0,  # radians
+                                                      azimuthal_angle=0.0,
+                                                      dabax=material_constants_library)  # radians
+    else: # xraylib
+        diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
+                                               crystal_name=crystal_descriptor,  # string
+                                               thickness=1,        # meters
+                                               miller_h=harmonic * h_miller,  # int
+                                               miller_k=harmonic * k_miller,  # int
+                                               miller_l=harmonic * l_miller,  # int
+                                               asymmetry_angle=0,    # radians
+                                               azimuthal_angle=0.0)  # radians
 
 
     bragg_angle = diffraction_setup_r.angleBragg(energy_setup)
@@ -103,19 +124,31 @@ def power1d_calc_bragg_monochromator(h_miller=1, k_miller=1, l_miller=1,
         ri = numpy.zeros_like(energies)
         ri_p = numpy.zeros_like(energies)
         for i in range(energies.size):
+            energy = energies[i]
             try:
-                diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
-                                                       crystal_name="Si",  # string
-                                                       thickness=1,  # meters
-                                                       miller_h=harmonic * h_miller,  # int
-                                                       miller_k=harmonic * k_miller,  # int
-                                                       miller_l=harmonic * l_miller,  # int
-                                                       asymmetry_angle=0,  # radians
-                                                       azimuthal_angle=0.0) # radians
+                if isinstance(material_constants_library, DabaxXraylib):
+                    diffraction_setup_r = DiffractionSetupDabax(geometry_type=BraggDiffraction(),  # GeometryType object
+                                                           crystal_name=crystal_descriptor,  # string
+                                                           thickness=1,  # meters
+                                                           miller_h=harmonic * h_miller,  # int
+                                                           miller_k=harmonic * k_miller,  # int
+                                                           miller_l=harmonic * l_miller,  # int
+                                                           asymmetry_angle=0,  # radians
+                                                           azimuthal_angle=0.0,
+                                                           dabax=material_constants_library) # radians
+
+                else:
+                    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
+                                                           crystal_name=crystal_descriptor,  # string
+                                                           thickness=1,  # meters
+                                                           miller_h=harmonic * h_miller,  # int
+                                                           miller_k=harmonic * k_miller,  # int
+                                                           miller_l=harmonic * l_miller,  # int
+                                                           asymmetry_angle=0,  # radians
+                                                           azimuthal_angle=0.0) # radians
 
                 diffraction = Diffraction()
 
-                energy = energies[i]
                 deviation = 0.0  # angle_deviation_min + ia * angle_step
                 angle = deviation + bragg_angle
 
@@ -143,19 +176,34 @@ def power1d_calc_bragg_monochromator(h_miller=1, k_miller=1, l_miller=1,
 
 def power1d_calc_laue_monochromator(h_miller=1, k_miller=1, l_miller=1,
                         energy_setup=8000.0, energies=numpy.linspace(7900, 8100, 200),
-                        calculation_method=0, thickness=10e-6):
+                        calculation_method=0, thickness=10e-6,
+                        crystal_descriptor="Si",
+                        material_constants_library=None):
 
     r = numpy.zeros_like(energies)
     r_p = numpy.zeros_like(energies)
     harmonic = 1
-    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
-                                           crystal_name="Si",    # string
-                                           thickness=thickness,  # meters
-                                           miller_h=harmonic * h_miller,  # int
-                                           miller_k=harmonic * k_miller,  # int
-                                           miller_l=harmonic * l_miller,  # int
-                                           asymmetry_angle=numpy.pi/2,  # radians
-                                           azimuthal_angle=0)  # radians
+    if material_constants_library is None: material_constants_library = xraylib
+
+    if isinstance(material_constants_library, DabaxXraylib):
+        diffraction_setup_r = DiffractionSetupDabax(geometry_type=LaueDiffraction(),  # GeometryType object
+                                               crystal_name=crystal_descriptor,    # string
+                                               thickness=thickness,  # meters
+                                               miller_h=harmonic * h_miller,  # int
+                                               miller_k=harmonic * k_miller,  # int
+                                               miller_l=harmonic * l_miller,  # int
+                                               asymmetry_angle=numpy.pi/2,  # radians
+                                               azimuthal_angle=0, # radians
+                                               dabax=material_constants_library)
+    else:
+        diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
+                                               crystal_name=crystal_descriptor,    # string
+                                               thickness=thickness,  # meters
+                                               miller_h=harmonic * h_miller,  # int
+                                               miller_k=harmonic * k_miller,  # int
+                                               miller_l=harmonic * l_miller,  # int
+                                               asymmetry_angle=numpy.pi/2,  # radians
+                                               azimuthal_angle=0)  # radians
 
 
     bragg_angle = diffraction_setup_r.angleBragg(energy_setup)
@@ -172,19 +220,30 @@ def power1d_calc_laue_monochromator(h_miller=1, k_miller=1, l_miller=1,
         ri = numpy.zeros_like(energies)
         ri_p = numpy.zeros_like(energies)
         for i in range(energies.size):
+            energy = energies[i]
             try:
-                diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
-                                                       crystal_name="Si",  # string
-                                                       thickness=thickness,  # meters
-                                                       miller_h=harmonic * h_miller,  # int
-                                                       miller_k=harmonic * k_miller,  # int
-                                                       miller_l=harmonic * l_miller,  # int
-                                                       asymmetry_angle=numpy.pi/2,  # radians
-                                                       azimuthal_angle=0)  # radians
+                if isinstance(material_constants_library, DabaxXraylib):
+                    diffraction_setup_r = DiffractionSetupDabax(geometry_type=LaueDiffraction(),  # GeometryType object
+                                                           crystal_name=crystal_descriptor,  # string
+                                                           thickness=thickness,  # meters
+                                                           miller_h=harmonic * h_miller,  # int
+                                                           miller_k=harmonic * k_miller,  # int
+                                                           miller_l=harmonic * l_miller,  # int
+                                                           asymmetry_angle=numpy.pi/2,  # radians
+                                                           azimuthal_angle=0,  # radians
+                                                           dabax=material_constants_library)
+                else:
+                    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
+                                                           crystal_name=crystal_descriptor,  # string
+                                                           thickness=thickness,  # meters
+                                                           miller_h=harmonic * h_miller,  # int
+                                                           miller_k=harmonic * k_miller,  # int
+                                                           miller_l=harmonic * l_miller,  # int
+                                                           asymmetry_angle=numpy.pi/2,  # radians
+                                                           azimuthal_angle=0)  # radians
 
                 diffraction = Diffraction()
 
-                energy = energies[i]
                 deviation = 0.0  # angle_deviation_min + ia * angle_step
                 angle = deviation + numpy.pi/2 + bragg_angle
 
@@ -211,8 +270,12 @@ def power1d_calc_laue_monochromator(h_miller=1, k_miller=1, l_miller=1,
 
 
 if __name__ == "__main__":
-    energies = numpy.linspace(3000, 30000, 200)
-    rs, rp = power1d_calc_multilayer_monochromator("/users/srio/Oasys/multilayerTiC.h5",
-                                                   energies=energies, grazing_angle_deg=0.4)
-    from srxraylib.plot.gol import plot
-    plot(energies, rs, energies, rp)
+    if 1: # mlayer
+        from dabax.dabax_xraylib import DabaxXraylib
+        energies = numpy.linspace(3000, 30000, 20)
+        rs, rp = power1d_calc_multilayer_monochromator("/users/srio/Oasys/multilayerTiC.h5",
+                                                       energies=energies, grazing_angle_deg=0.4,
+                                                       material_constants_library=DabaxXraylib())
+        from srxraylib.plot.gol import plot
+        plot(energies, rs, energies, rp)
+

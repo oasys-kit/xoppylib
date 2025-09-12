@@ -26,6 +26,8 @@ def xoppy_calc_power_monochromator(energies=None,                    # array wit
                                    polarization=0,                   # 0=sigma, 1=pi, 2=unpolarized
                                    external_reflectivity_file='',    # file with external reflectivity
                                    output_file="monochromator.spec", # filename if FILE_DUMP=1
+                                   crystal_descriptor="Si",          # for TYPE in [0,1] the crystal descriptor accepted by dabax or xraylib
+                                   material_constants_library=None,  # xraylib or DabaxXraylib()
                                    ):
 
     if energies is None:
@@ -38,16 +40,21 @@ def xoppy_calc_power_monochromator(energies=None,                    # array wit
     elif TYPE == 1:
         Mono_Effect, Mono_Effect_p = power1d_calc_bragg_monochromator(energies=energies,
                                                                       energy_setup=ENER_SELECTED,
-                                                                      calculation_method=METHOD)
+                                                                      calculation_method=METHOD,
+                                                                      crystal_descriptor=crystal_descriptor,
+                                                                      material_constants_library=material_constants_library)
     elif TYPE == 2:
         Mono_Effect, Mono_Effect_p = power1d_calc_laue_monochromator(energies=energies,
                                                                      energy_setup=ENER_SELECTED,
                                                                      calculation_method=METHOD,
-                                                                     thickness=THICK * 1e-6)
+                                                                     thickness=THICK * 1e-6,
+                                                                     crystal_descriptor=crystal_descriptor,
+                                                                     material_constants_library=material_constants_library)
     elif TYPE == 3:
         Mono_Effect, Mono_Effect_p = power1d_calc_multilayer_monochromator(ML_H5_FILE,
                                                                            energies=energies,
-                                                                           grazing_angle_deg=ML_GRAZING_ANGLE_DEG)
+                                                                           grazing_angle_deg=ML_GRAZING_ANGLE_DEG,
+                                                                           material_constants_library=material_constants_library)
 
     elif TYPE == 4:
         polarization = 0
@@ -134,7 +141,60 @@ def xoppy_calc_power_monochromator(energies=None,                    # array wit
     return {"data": Output, "labels": outColTitles, "info": txt}
 
 if __name__ == "__main__":
-    print(xoppy_calc_power_monochromator(TYPE=0))
-    print(xoppy_calc_power_monochromator(TYPE=1))
-    print(xoppy_calc_power_monochromator(TYPE=2))
-    print(xoppy_calc_power_monochromator(TYPE=3, ML_H5_FILE="/users/srio/Oasys/multilayerTiC.h5", ML_GRAZING_ANGLE_DEG=0.4))
+    # print(xoppy_calc_power_monochromator(TYPE=0))
+    # print(xoppy_calc_power_monochromator(TYPE=1))
+    # print(xoppy_calc_power_monochromator(TYPE=2))
+    # print(xoppy_calc_power_monochromator(TYPE=3, ML_H5_FILE="/users/srio/Oasys/multilayerTiC.h5", ML_GRAZING_ANGLE_DEG=0.4))
+
+    if 1: # mlayer
+        import numpy
+
+        energy = numpy.linspace(4000, 30000, 100)
+        spectral_power = numpy.ones(100)
+
+        #
+        # script to make the calculations (created by XOPPY:xpower)
+        #
+
+        import numpy
+        from xoppylib.power.xoppy_calc_power_monochromator import xoppy_calc_power_monochromator
+        import xraylib
+        from dabax.dabax_xraylib import DabaxXraylib
+
+        out_dictionary = xoppy_calc_power_monochromator(
+            energy,  # array with energies in eV
+            spectral_power,  # array with source spectral density
+            TYPE=3,  # 0=None, 1=Crystal Bragg, 2=Crystal Laue, 3=Multilayer, 4=External file
+            ENER_SELECTED=8000,  # Energy to set crystal monochromator
+            METHOD=0,  # For crystals, in crystalpy, 0=Zachariasem, 1=Guigay
+            THICK=15,  # crystal thicknes Laur crystal in um
+            ML_H5_FILE="/users/srio/Oasys/multilayerTiC.h5",
+            # File with inputs from multilaters (from xoppy/Multilayer)
+            ML_GRAZING_ANGLE_DEG=0.4,  # for multilayers the grazing angle in degrees
+            N_REFLECTIONS=2,  # number of reflections (crystals or multilayers)
+            FILE_DUMP=0,  # 0=No, 1=yes
+            polarization=0,  # 0=sigma, 1=pi, 2=unpolarized
+            external_reflectivity_file="<none>",  # file with external reflectivity
+            output_file="monochromator.spec",  # filename if FILE_DUMP=1
+        )
+
+        # data to pass
+        energy = out_dictionary["data"][0, :]
+        spectral_power = out_dictionary["data"][-1, :]
+
+        #
+        # example plots
+        #
+        if True:
+            from srxraylib.plot.gol import plot
+
+            plot(out_dictionary["data"][0, :], out_dictionary["data"][1, :],
+                 out_dictionary["data"][0, :], out_dictionary["data"][-1, :],
+                 xtitle=out_dictionary["labels"][0],
+                 legend=[out_dictionary["labels"][1], out_dictionary["labels"][-1]],
+                 title='Spectral Power [W/eV]')
+
+        #
+        # end script
+        #
+
