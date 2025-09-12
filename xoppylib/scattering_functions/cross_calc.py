@@ -214,7 +214,7 @@ def cross_calc_nist(descriptor, energy, calculate=0, unit=None, verbose=True,
     energy = numpy.array(energy,dtype=float).reshape(-1)
     out = numpy.zeros_like(energy)
 
-    nist_compound = xraylib.GetCompoundDataNISTByName(descriptor)
+    nist_compound = material_constants_library.GetCompoundDataNISTByName(descriptor)
 
     if verbose:
         print("nist compound:")
