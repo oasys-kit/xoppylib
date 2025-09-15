@@ -138,58 +138,60 @@ def power1d_calc_bragg_monochromator(h_miller=1, k_miller=1, l_miller=1,
 
     for harmonic in range(1,nharmonics+1,2): # calculate only odd harmonics
         print("\nCalculating harmonic: ", harmonic)
+
+        if isinstance(material_constants_library, DabaxXraylib):
+            diffraction_setup_r = DiffractionSetupDabax(geometry_type=BraggDiffraction(),  # GeometryType object
+                                                        crystal_name=crystal_descriptor,  # string
+                                                        thickness=1,  # meters
+                                                        miller_h=harmonic * h_miller,  # int
+                                                        miller_k=harmonic * k_miller,  # int
+                                                        miller_l=harmonic * l_miller,  # int
+                                                        asymmetry_angle=0,  # radians
+                                                        azimuthal_angle=0.0,
+                                                        dabax=material_constants_library)  # radians
+
+        else:
+            diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
+                                                          crystal_name=crystal_descriptor,  # string
+                                                          thickness=1,  # meters
+                                                          miller_h=harmonic * h_miller,  # int
+                                                          miller_k=harmonic * k_miller,  # int
+                                                          miller_l=harmonic * l_miller,  # int
+                                                          asymmetry_angle=0,  # radians
+                                                          azimuthal_angle=0.0)  # radians
+
+        diffraction = Diffraction()
+
+        deviation = 0.0  # angle_deviation_min + ia * angle_step
+        angle = deviation + bragg_angle
+
+        # calculate the components of the unitary vector of the incident photon scan
+        # Note that diffraction plane is YZ
+        yy = numpy.cos(angle)
+        zz = - numpy.abs(numpy.sin(angle))
+
+
         ri = numpy.zeros_like(energies)
         ri_p = numpy.zeros_like(energies)
-        for i in range(energies.size):
-            energy = energies[i]
-            try:
-                if isinstance(material_constants_library, DabaxXraylib):
-                    diffraction_setup_r = DiffractionSetupDabax(geometry_type=BraggDiffraction(),  # GeometryType object
-                                                           crystal_name=crystal_descriptor,  # string
-                                                           thickness=1,  # meters
-                                                           miller_h=harmonic * h_miller,  # int
-                                                           miller_k=harmonic * k_miller,  # int
-                                                           miller_l=harmonic * l_miller,  # int
-                                                           asymmetry_angle=0,  # radians
-                                                           azimuthal_angle=0.0,
-                                                           dabax=material_constants_library) # radians
 
-                else:
-                    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
-                                                           crystal_name=crystal_descriptor,  # string
-                                                           thickness=1,  # meters
-                                                           miller_h=harmonic * h_miller,  # int
-                                                           miller_k=harmonic * k_miller,  # int
-                                                           miller_l=harmonic * l_miller,  # int
-                                                           asymmetry_angle=0,  # radians
-                                                           azimuthal_angle=0.0) # radians
+        photon = Photon(energy_in_ev=energies, direction_vector=Vector(numpy.full(energies.size, 0.0),
+                                                                       numpy.full(energies.size, float(yy)),
+                                                                       numpy.full(energies.size, float(zz)))
+                        )
 
-                diffraction = Diffraction()
+        # perform the calculation
+        coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=calculation_method)
+        # note the power 2 to get intensity (**2) for a single reflection
 
-                deviation = 0.0  # angle_deviation_min + ia * angle_step
-                angle = deviation + bragg_angle
+        ri = numpy.abs( coeffs_r['S'] ) ** 2
+        ri_p = numpy.abs( coeffs_r['P'] ) ** 2
+        r = r + ri
+        r_p = r_p + ri_p
 
-                # calculate the components of the unitary vector of the incident photon scan
-                # Note that diffraction plane is YZ
-                yy = numpy.cos(angle)
-                zz = - numpy.abs(numpy.sin(angle))
-                photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
-
-                # perform the calculation
-                coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=calculation_method)
-                # note the power 2 to get intensity (**2) for a single reflection
-
-                r[i] += numpy.abs( coeffs_r['S'] ) ** 2
-                ri[i] = numpy.abs( coeffs_r['S'] ) ** 2
-                r_p[i] += numpy.abs( coeffs_r['P'] ) ** 2
-                ri_p[i] = numpy.abs( coeffs_r['P'] ) ** 2
-            except:
-                print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
-                                        harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
         print("Max reflectivity S-polarized: ", ri.max(), " at energy: ", energies[ri.argmax()])
         print("Max reflectivity P-polarized: ", ri_p.max(), " at energy: ", energies[ri_p.argmax()])
 
-    return r, r_p
+    return numpy.array(r, dtype=float), numpy.array(r_p, dtype=float)
 
 def power1d_calc_laue_monochromator(h_miller=1, k_miller=1, l_miller=1,
                         energy_setup=8000.0, energies=numpy.linspace(7900, 8100, 200),
@@ -234,56 +236,56 @@ def power1d_calc_laue_monochromator(h_miller=1, k_miller=1, l_miller=1,
 
     for harmonic in range(1, nharmonics+1, 2): # calculate only odd harmonics
         print("\nCalculating harmonic: ", harmonic)
-        ri = numpy.zeros_like(energies)
-        ri_p = numpy.zeros_like(energies)
-        for i in range(energies.size):
-            energy = energies[i]
-            try:
-                if isinstance(material_constants_library, DabaxXraylib):
-                    diffraction_setup_r = DiffractionSetupDabax(geometry_type=LaueDiffraction(),  # GeometryType object
-                                                           crystal_name=crystal_descriptor,  # string
-                                                           thickness=thickness,  # meters
-                                                           miller_h=harmonic * h_miller,  # int
-                                                           miller_k=harmonic * k_miller,  # int
-                                                           miller_l=harmonic * l_miller,  # int
-                                                           asymmetry_angle=numpy.pi/2,  # radians
-                                                           azimuthal_angle=0,  # radians
-                                                           dabax=material_constants_library)
-                else:
-                    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
-                                                           crystal_name=crystal_descriptor,  # string
-                                                           thickness=thickness,  # meters
-                                                           miller_h=harmonic * h_miller,  # int
-                                                           miller_k=harmonic * k_miller,  # int
-                                                           miller_l=harmonic * l_miller,  # int
-                                                           asymmetry_angle=numpy.pi/2,  # radians
-                                                           azimuthal_angle=0)  # radians
 
-                diffraction = Diffraction()
+        if isinstance(material_constants_library, DabaxXraylib):
+            diffraction_setup_r = DiffractionSetupDabax(geometry_type=LaueDiffraction(),  # GeometryType object
+                                                        crystal_name=crystal_descriptor,  # string
+                                                        thickness=thickness,  # meters
+                                                        miller_h=harmonic * h_miller,  # int
+                                                        miller_k=harmonic * k_miller,  # int
+                                                        miller_l=harmonic * l_miller,  # int
+                                                        asymmetry_angle=numpy.pi / 2,  # radians
+                                                        azimuthal_angle=0,  # radians
+                                                        dabax=material_constants_library)
+        else:
+            diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
+                                                          crystal_name=crystal_descriptor,  # string
+                                                          thickness=thickness,  # meters
+                                                          miller_h=harmonic * h_miller,  # int
+                                                          miller_k=harmonic * k_miller,  # int
+                                                          miller_l=harmonic * l_miller,  # int
+                                                          asymmetry_angle=numpy.pi / 2,  # radians
+                                                          azimuthal_angle=0)  # radians
 
-                deviation = 0.0  # angle_deviation_min + ia * angle_step
-                angle = deviation + numpy.pi/2 + bragg_angle
+        diffraction = Diffraction()
 
-                # calculate the components of the unitary vector of the incident photon scan
-                # Note that diffraction plane is YZ
-                yy = numpy.cos(angle)
-                zz = - numpy.abs(numpy.sin(angle))
-                photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
+        deviation = 0.0  # angle_deviation_min + ia * angle_step
+        angle = deviation + numpy.pi / 2 + bragg_angle
 
-                # perform the calculation
-                coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=calculation_method)
-                # note the power 2 to get intensity
-                r[i] += numpy.abs( coeffs_r['S'] ) ** 2
-                ri[i] = numpy.abs( coeffs_r['S'] ) ** 2
+        # calculate the components of the unitary vector of the incident photon scan
+        # Note that diffraction plane is YZ
+        yy = numpy.cos(angle)
+        zz = - numpy.abs(numpy.sin(angle))
 
-                r_p[i] += numpy.abs( coeffs_r['P'] ) ** 2
-                ri_p[i] = numpy.abs( coeffs_r['P'] ) ** 2
-            except:
-                print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
-                                        harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
+        photon = Photon(energy_in_ev=energies, direction_vector=Vector(numpy.full(energies.size, 0.0),
+                                                                       numpy.full(energies.size, float(yy)),
+                                                                       numpy.full(energies.size, float(zz))))
+
+
+        # perform the calculation
+        coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=calculation_method)
+
+
+        # note the power 2 to get intensity (**2) for a single reflection
+        ri = numpy.abs( coeffs_r['S'] ) ** 2
+        ri_p = numpy.abs( coeffs_r['P'] ) ** 2
+        r = r + ri
+        r_p = r_p + ri_p
+
         print("Max reflectivity S-polarized: ", ri.max(), " at energy: ", energies[ri.argmax()])
         print("Max reflectivity P-polarized: ", ri_p.max(), " at energy: ", energies[ri_p.argmax()])
-    return r, r_p
+
+    return numpy.array(r, dtype=float), numpy.array(r_p, dtype=float)
 
 
 if __name__ == "__main__":
