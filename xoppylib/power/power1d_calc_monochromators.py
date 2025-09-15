@@ -31,8 +31,8 @@ def power1d_calc_multilayer_monochromator(filename,
         mlroughness1 = numpy.array(f["MLayer/parameters/mlroughness1"])
         mlroughness2 = numpy.array(f["MLayer/parameters/mlroughness2"])
         roughnessS = f["MLayer/parameters/roughnessS"][()]
-        np = f["MLayer/parameters/np"][()]
-        npair = f["MLayer/parameters/npair"][()]
+        # np = f["MLayer/parameters/np"][()]
+        npair = numpy.abs(f["MLayer/parameters/npair"][()])
         thick = numpy.array(f["MLayer/parameters/thick"])
 
         f.close()
@@ -53,28 +53,45 @@ def power1d_calc_multilayer_monochromator(filename,
             print("mlroughness1  = ", mlroughness1  )
             print("mlroughness2  = ", mlroughness2  )
             print("roughnessS    = ", roughnessS    )
-            print("np            = ", np            )
+            # print("np            = ", np            )
             print("npair         = ", npair         )
             print("thick         = ", thick         )
             print("Calculation for %d points of energy in [%.3f, %.3f] eV for theta_grazing=%.3f deg" % (
                 energies.size, energies[0], energies[-1], grazing_angle_deg))
             print("=====================================\n\n")
+    except:
+        raise Exception("Error reading file: %s" % filename)
+
+    try:
+        if isinstance(material_constants_library, DabaxXraylib):
+            use_xraylib_or_dabax = 1
+            dabax = material_constants_library
+            if verbose:
+                print(dabax.info())
+        else: # xraylib
+            use_xraylib_or_dabax = 0
+            dabax = None
 
         out = MLayer.initialize_from_bilayer_stack(
             material_S=materialS, density_S=densityS, roughness_S=roughnessS,
             material_E=material1, density_E=density1, roughness_E=mlroughness1[0],
             material_O=material2, density_O=density2, roughness_O=mlroughness2[0],
-            bilayer_pairs=np,
+            bilayer_pairs=npair,
             bilayer_thickness=thick[0],
             bilayer_gamma=gamma1[0],
-            material_constants_library=material_constants_library,
+            use_xraylib_or_dabax=use_xraylib_or_dabax,
+            dabax=dabax,
         )
-        rs, rp = out.scan_energy( energies, theta1=grazing_angle_deg, h5file="", verbose=verbose) # amplitude R
+
+        rs, rp, _, _ = out.scan(h5file="",
+            energyN=energies.size, energy1=energies[0], energy2=energies[-1],
+            thetaN=1, theta1=grazing_angle_deg, theta2=grazing_angle_deg,
+            verbose=verbose)
 
     except:
-        raise Exception("Error reading file: %s" % filename)
+        raise Exception("Error calculating reflectivity: %s" % filename)
 
-    return numpy.abs(rs)**2, numpy.abs(rp)**2
+    return numpy.abs(rs.flatten())**2, numpy.abs(rp.flatten())**2
 
 
 def power1d_calc_bragg_monochromator(h_miller=1, k_miller=1, l_miller=1,
