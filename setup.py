@@ -54,7 +54,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.36'
+VERSION = '1.0.37'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'
