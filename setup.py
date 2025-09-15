@@ -54,7 +54,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.37'
+VERSION = '1.0.38'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'
@@ -68,16 +68,16 @@ MAINTAINER = 'Manuel Sanchez del Rio'
 MAINTAINER_EMAIL = 'srio@esrf.eu'
 LICENSE = 'MIT'
 
-KEYWORDS = (
+KEYWORDS = [
     'x-ray'
     'synchrotron radiation',
     'materials x-ray optical constants',
     'Insertion devices',
     'Optical elements',
     'simulation',
-)
+]
 
-CLASSIFIERS = (
+CLASSIFIERS = [
     'Development Status :: 5 - Production/Stable',
     'Environment :: Console',
     'Environment :: Plugins',
@@ -91,7 +91,7 @@ CLASSIFIERS = (
     'Intended Audience :: Education',
     'Intended Audience :: Science/Research',
     'Intended Audience :: Developers',
-)
+]
 
 INSTALL_REQUIRES = (
     'setuptools',
