@@ -176,7 +176,9 @@ def bragg_calc(descriptor="Si", hh=1, kk=1, ll=1, temper=1.0, emin=5000.0, emax=
 
     """
 
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try: material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
 
     output_dictionary = {}
 
@@ -585,7 +587,6 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
                 emin=5000.0, emax=15000.0, estep=100.0, ANISO_SEL=0,
                 fileout=None,
                 do_not_prototype=0, # 0=use site groups (recommended), 1=use all individual sites
-                verbose=True,
                 material_constants_library=None,
                 ):
     """
@@ -628,7 +629,9 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
         a dictionary with all ingredients of the structure factor.
     """
 
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try: material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
 
     output_dictionary = {}
 
@@ -1042,7 +1045,9 @@ def mare_calc(descriptor, H, K, L, HMAX, KMAX, LMAX, FHEDGE, DISPLAY, lambda1, d
 
     """
 
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try: material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
 
     list_of_scripts = []
 
@@ -1511,7 +1516,9 @@ def calc_temperature_factor(temperature, crystal='Si', debyeTemperature=644.92,
     #     >>> calc_temperature_factor(80, crystal='Si', millerIndex=[1,1,1], debyeTemperature=644.92, atomicMass=28.09, dSpacing=3.1354163)
     #     0.9955698950510736
 
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try: material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
 
     def debyeFunc(x):
         return x / (numpy.exp(-x) - 1)

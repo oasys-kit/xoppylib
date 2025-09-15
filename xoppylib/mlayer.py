@@ -588,9 +588,12 @@ class MLayer(object):
         """
 
         if use_xraylib_or_dabax == 0:
-            try: import xraylib
-            except: "xraylib not available"
-            material_constant_library = xraylib
+            try:
+                import xraylib
+                material_constant_library = xraylib
+            except:
+                raise ValueError("xraylib not available")
+
         else:
             material_constant_library = dabax
 

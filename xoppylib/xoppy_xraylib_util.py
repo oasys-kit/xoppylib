@@ -51,7 +51,10 @@ def nist_compound_list(material_constants_library=None):
     return material_constants_library.GetCompoundDataNISTList()
 
 def density(descriptor, material_constants_library=None):
-    if material_constants_library is None: material_constants_library=xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
+
     kind = descriptor_kind_index(descriptor, material_constants_library=material_constants_library)
     if kind == 0:
         return density_element(descriptor, material_constants_library=material_constants_library)

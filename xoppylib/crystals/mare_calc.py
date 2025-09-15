@@ -1,6 +1,3 @@
-try: import xraylib
-except: print("xraylib is not available.")
-
 import numpy
 import scipy.constants as codata
 from xoppylib.crystals.tools import bragg_metrictensor, lorentz
@@ -8,7 +5,7 @@ from xoppylib.crystals.tools import bragg_calc2, crystal_fh
 
 toangstroms = codata.h * codata.c / codata.e * 1e10
 
-def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda,PHI,DELTAPHI,verbose=0):
+def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda,PHI,DELTAPHI, material_constants_library, verbose=0):
     """
         Calculates:
 
@@ -68,7 +65,7 @@ def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda
     list_of_scripts = []
 
 
-    cryst = xraylib.Crystal_GetCrystal(descriptor)
+    cryst = material_constants_library.Crystal_GetCrystal(descriptor)
     # volume = cryst['volume']
     #
     # #test crystal data - not needed
@@ -162,7 +159,7 @@ def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda
     # ;
     # ; first call to bragg_inp, then calculates the intensity of the main reflection
     # ;
-    fhInp = bragg_calc2(descriptor,int(P[0]),int(P[1]),int(P[2]),emin=energy-100,emax=energy+100,estep=10.0)
+    fhInp = bragg_calc2(descriptor,int(P[0]),int(P[1]),int(P[2]),emin=energy-100,emax=energy+100,estep=10.0, material_constants_library=material_constants_library)
     outInt = crystal_fh(fhInp,energy)
 
     bragg_angle = 180.0 / numpy.pi * numpy.arcsin(lambda1 * 1e-8/2 / fhInp['dspacing'])
@@ -237,7 +234,8 @@ def mare_calc(descriptor,H,K,L,HMAX,KMAX,LMAX,FHEDGE,DISPLAY,lambda1,deltalambda
                 #   ; computes intensity
                 #   ;
 
-                fhInp = bragg_calc2(descriptor,int(r[0]),int(r[1]),int(r[2]),emin=energy-100,emax=energy+100,estep=10.0,fileout=None)
+                fhInp = bragg_calc2(descriptor,int(r[0]),int(r[1]),int(r[2]),emin=energy-100,emax=energy+100,estep=10.0,fileout=None,
+                                    material_constants_library=material_constants_library)
 
                 fhInp["f1"] *= 0.0
                 fhInp["f2"] *= 0.0
