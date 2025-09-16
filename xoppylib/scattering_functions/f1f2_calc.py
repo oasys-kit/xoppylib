@@ -4,7 +4,7 @@ import scipy.constants as codata
 from xoppylib.scattering_functions.fresnel import interface_reflectivity
 
 try: import xraylib
-except: print("xraylib is not available.")
+except: pass
 
 from dabax.dabax_xraylib import DabaxXraylib
 

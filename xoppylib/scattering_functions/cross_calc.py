@@ -2,8 +2,7 @@ import numpy
 import scipy.constants as codata
 
 try: import xraylib
-except: print("xraylib is not available.")
-
+except: pass
 from dabax.dabax_xraylib import DabaxXraylib
 
 def cross_calc(descriptor, energy, calculate=0, unit=None, density=None, verbose=True,

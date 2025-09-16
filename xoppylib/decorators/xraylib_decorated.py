@@ -2,7 +2,7 @@
 # xraylib decorated with xoppy functions
 #
 try: import xraylib
-except: print("xraylib is not available.")
+except: pass
 
 from xoppylib.decorators.xoppy_decorator import XoppyDecorator
 

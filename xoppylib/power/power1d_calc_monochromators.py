@@ -11,7 +11,7 @@ from crystalpy.util.Photon import Photon
 from xoppylib.mlayer import MLayer
 
 try: import xraylib
-except: print("xraylib not available")
+except: pass
 from dabax.dabax_xraylib import DabaxXraylib
 
 def power1d_calc_multilayer_monochromator(filename,

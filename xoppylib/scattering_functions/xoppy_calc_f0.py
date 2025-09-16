@@ -4,7 +4,7 @@ from dabax.common_tools import calculate_f0_from_f0coeff, atomic_number, atomic_
 from dabax.dabax_xraylib import DabaxXraylib
 
 try: import xraylib
-except: print("xraylib is not available.")
+except: pass
 
 def xoppy_calc_f0(
         descriptor                 = "Si",

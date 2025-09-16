@@ -1,7 +1,7 @@
 import numpy
 
 try: import xraylib
-except: print("xraylib is not available.")
+except: pass
 
 from xoppylib.scattering_functions.cross_calc import cross_calc, cross_calc_mix, cross_calc_nist
 

@@ -8,7 +8,7 @@ import h5py
 
 from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
-except: print("xraylib is not available.")
+except: pass
 
 from xoppylib.scattering_functions.fresnel import reflectivity_fresnel
 from xoppylib.xoppy_xraylib_util import nist_compound_list, density

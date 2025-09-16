@@ -2,7 +2,7 @@
 import numpy
 
 try: import xraylib
-except: print("xraylib is not available.")
+except: pass
 
 import scipy.constants as codata
 from xoppylib.crystals.bragg_preprocessor_file_io import bragg_preprocessor_file_v1_write

@@ -6,7 +6,7 @@ from xoppylib.scattering_functions.fresnel import reflectivity_fresnel
 
 # using: CS_Total_CP Refractive_Index_Re Refractive_Index_Im
 try: import xraylib
-except: print("xraylib is not available.")
+except: pass
 
 from dabax.dabax_xraylib import DabaxXraylib
 

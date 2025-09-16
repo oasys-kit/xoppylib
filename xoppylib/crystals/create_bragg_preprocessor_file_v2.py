@@ -2,7 +2,7 @@
 import numpy
 
 try: import xraylib
-except: print("xraylib is not available.")
+except: pass
 
 import scipy.constants as codata
 
