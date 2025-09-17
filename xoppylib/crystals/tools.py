@@ -140,7 +140,7 @@ def lorentz(theta_bragg_deg, return_what=0):
 
 # OBSOLETE.... USE bragg_calc2() INSTEAD!
 def bragg_calc(descriptor="Si", hh=1, kk=1, ll=1, temper=1.0, emin=5000.0, emax=15000.0, estep=100.0, fileout=None,
-               material_constants_library=None):
+               material_constants_library=None, verbose=False):
     """
     OBSOLETE.... USE bragg_calc2() INSTEAD!
     Preprocessor for Structure Factor (FH) calculations. It calculates the basic ingredients of FH.
@@ -588,6 +588,7 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
                 fileout=None,
                 do_not_prototype=0, # 0=use site groups (recommended), 1=use all individual sites
                 material_constants_library=None,
+                verbose=False
                 ):
     """
     Preprocessor for Structure Factor (FH) calculations. It calculates the basic ingredients of FH.
