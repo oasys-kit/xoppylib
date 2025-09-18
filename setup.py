@@ -45,7 +45,7 @@ __authors__ = ["M Sanchez del Rio"]
 __license__ = "MIT"
 __date__ = "20212025"
 
-import os, sys
+import os
 
 try:
     from setuptools import find_packages, setup
