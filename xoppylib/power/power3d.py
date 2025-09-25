@@ -81,7 +81,9 @@ def calculate_component_absorbance_and_transmittance(
     material_constants_library=None,
     ):
 
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
     #
     # important: the transmittance calculated here is referred on axes perp to the beam
     # therefore they do not include geometrical corrections for correct integral

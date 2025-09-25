@@ -47,7 +47,9 @@ def write_spec_file(file_out,data,titles,scan_title=""):
     print("File written to disk: %s"%file_out)
 
 def nist_compound_list(material_constants_library=None):
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
     return material_constants_library.GetCompoundDataNISTList()
 
 def density(descriptor, material_constants_library=None):
@@ -66,7 +68,9 @@ def density(descriptor, material_constants_library=None):
         raise Exception("Unknown descriptor: %s" % descriptor)
 
 def density_element(DESCRIPTOR, verbose=False, material_constants_library=None):
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
     if isinstance(DESCRIPTOR, str):
         Z = material_constants_library.SymbolToAtomicNumber(DESCRIPTOR)
     elif isinstance(DESCRIPTOR, int):
@@ -81,7 +85,9 @@ def density_element(DESCRIPTOR, verbose=False, material_constants_library=None):
     return density
 
 def density_nist(DESCRIPTOR, verbose=False, material_constants_library=None):
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
     if isinstance(DESCRIPTOR, str):
         Zarray = material_constants_library.GetCompoundDataNISTByName(DESCRIPTOR)
         density = Zarray["density"]
@@ -95,7 +101,9 @@ def density_nist(DESCRIPTOR, verbose=False, material_constants_library=None):
     return density
 
 def descriptor_kind_index(descriptor, material_constants_library=None):
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
     if not isinstance(descriptor, str):
         raise Exception("descriptor must be a string!")
     out = -1
@@ -121,7 +129,9 @@ def parse_formula(formula, material_constants_library=None): # included now in x
 
     """
     import re
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
     tmp = re.findall(r'([A-Z][a-z]*)(\d*)', formula)
     elements = []
     fatomic = []
@@ -154,7 +164,9 @@ def parse_formula(formula, material_constants_library=None): # included now in x
 # bind some xraylib functions to allow NIST compound as inputs
 #
 def Refractive_Index_Re_Extended_NIST(descriptor, energy_in_keV, density, material_constants_library=None):
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
     if descriptor_kind_index(descriptor, material_constants_library=material_constants_library) == 2:
         return 1.0 - f1f2_calc_nist(descriptor, energy_in_keV * 1e3, F=3, density=density, verbose=False,
                                     material_constants_library=material_constants_library)#[0]
@@ -162,10 +174,10 @@ def Refractive_Index_Re_Extended_NIST(descriptor, energy_in_keV, density, materi
         return material_constants_library.Refractive_Index_Re(descriptor, energy_in_keV, density)
 
 def Refractive_Index_Im_Extended_NIST(descriptor, energy_in_keV, density, material_constants_library=None):
-    if material_constants_library is None: material_constants_library = xraylib
-
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
     if descriptor_kind_index(descriptor, material_constants_library=material_constants_library) == 2:
-        t0 = time.time()
         cs = cross_calc_nist(descriptor, energy_in_keV * 1e3, calculate=0, unit=3, verbose=False,
                              material_constants_library=material_constants_library)#[0]
         wavelength = codata.h * codata.c / codata.e / (energy_in_keV * 1e3)

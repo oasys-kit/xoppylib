@@ -23,7 +23,9 @@ def create_bragg_preprocessor_file_v2(interactive=True,
      SHADOW preprocessor for crystals - python+xraylib version
 
      -"""
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
     # codata_e2_mc2 = 2.81794032e-15 = Classical electron radius in S.I.
     codata_e2_mc2 = codata.hbar * codata.alpha / codata.m_e / codata.c
 

@@ -104,7 +104,9 @@ def power1d_calc_bragg_monochromator(h_miller=1, k_miller=1, l_miller=1,
     r_p = numpy.zeros_like(energies)
     harmonic = 1
 
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
 
     if isinstance(material_constants_library, DabaxXraylib):
         diffraction_setup_r = DiffractionSetupDabax(geometry_type=BraggDiffraction(),  # GeometryType object
@@ -202,7 +204,9 @@ def power1d_calc_laue_monochromator(h_miller=1, k_miller=1, l_miller=1,
     r = numpy.zeros_like(energies)
     r_p = numpy.zeros_like(energies)
     harmonic = 1
-    if material_constants_library is None: material_constants_library = xraylib
+    if material_constants_library is None:
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
 
     if isinstance(material_constants_library, DabaxXraylib):
         diffraction_setup_r = DiffractionSetupDabax(geometry_type=LaueDiffraction(),  # GeometryType object
