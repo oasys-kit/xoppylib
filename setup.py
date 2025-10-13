@@ -43,7 +43,7 @@
 
 __authors__ = ["M Sanchez del Rio"]
 __license__ = "MIT"
-__date__ = "20212025"
+__date__ = "2021-2025"
 
 import os
 
@@ -54,7 +54,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.42'
+VERSION = '1.0.43'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'

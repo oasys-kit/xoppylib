@@ -2,7 +2,6 @@ __author__ = 'srio'
 # https://stackoverflow.com/questions/21566379/fitting-a-2d-gaussian-function-using-scipy-optimize-curve-fit-valueerror-and-m
 
 import numpy as np
-from srxraylib.plot.gol import plot_image
 import scipy.optimize as opt
 
 def fit_gaussian2d(data,x0,y0,p0=None):
@@ -78,6 +77,8 @@ def info_params(mZ):
     return txt
 
 if __name__ == "__main__":
+    from srxraylib.plot.gol import plot_image
+
     nx = 200
     ny = 300
     x0 = np.linspace(-20,20,nx)
