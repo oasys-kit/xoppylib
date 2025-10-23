@@ -54,7 +54,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.44'
+VERSION = '1.0.45'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'
@@ -100,7 +100,7 @@ INSTALL_REQUIRES = (
     'srxraylib>=1.0.63',
     'pySRU',
     'h5py',
-    'dabax>=1.0.9',
+    'dabax>=1.0.10',
     'crystalpy',
 )
 
