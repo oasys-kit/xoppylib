@@ -40,6 +40,7 @@ import array
 
 import numpy
 import shutil # to copy files
+import platform
 
 #SRW
 USE_URGENT= True
@@ -89,7 +90,6 @@ try:
     from xoppylib.xoppy_util import locations
     home_bin = locations.home_bin()
 except:
-    import platform
     if platform.system() == 'Linux':
         home_bin='/scisoft/xop2.4/bin.linux/'
         print("srundplug: undefined home_bin. It has been set to ", home_bin)
