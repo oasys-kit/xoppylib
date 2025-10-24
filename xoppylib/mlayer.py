@@ -1194,6 +1194,8 @@ class MLayer(object):
                     DELO[i]  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
                     BETO[i]  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
         elif self.using_pre_mlayer == 0: # not using preprocessor, using xraylib
+            try: import xraylib
+            except: raise ModuleNotFoundError("xraylib is not installed")
             if is_monochromatic:
                 DELS[:]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
                 BETS[:]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
