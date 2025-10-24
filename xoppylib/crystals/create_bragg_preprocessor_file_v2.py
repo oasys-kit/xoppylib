@@ -1,16 +1,11 @@
 
 import numpy
-
+from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
 except: pass
 
 import scipy.constants as codata
 
-# needed by bragg_calc
-from dabax.common_tools import f0_xop
-
-# needed by bragg_calc
-from dabax.common_tools import bragg_metrictensor, atomic_symbols
 from xoppylib.crystals.tools import bragg_calc2
 
 def create_bragg_preprocessor_file_v2(interactive=True,
@@ -90,7 +85,6 @@ def create_bragg_preprocessor_file_v2(interactive=True,
 if __name__ == "__main__":
 
     from xoppylib.crystals.bragg_preprocessor_file_io import bragg_preprocessor_file_v2_read
-    from dabax.dabax_xraylib import DabaxXraylib
     for method in [0,1]:
         if method == 0:
             dx = DabaxXraylib()

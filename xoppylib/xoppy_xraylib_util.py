@@ -1,17 +1,12 @@
-import time
-
+from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
 except: pass
 
 import scipy.constants as codata
-
 import numpy
-from dabax.dabax_xraylib import DabaxXraylib
 
 from xoppylib.scattering_functions.cross_calc import cross_calc_nist
 from xoppylib.scattering_functions.f1f2_calc import f1f2_calc_nist
-
-
 
 toangstroms = codata.h * codata.c / codata.e * 1e10
 

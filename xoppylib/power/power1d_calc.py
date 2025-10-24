@@ -5,10 +5,10 @@ from xoppylib.xoppy_xraylib_util import descriptor_kind_index, density
 from xoppylib.scattering_functions.fresnel import reflectivity_fresnel
 
 # using: CS_Total_CP Refractive_Index_Re Refractive_Index_Im
+from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
 except: pass
 
-from dabax.dabax_xraylib import DabaxXraylib
 
 def power1d_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(100),
                 substance=["Be"], flags=[0], dens=["?"], thick=[0.5], angle=[3.0], roughness=0.0,

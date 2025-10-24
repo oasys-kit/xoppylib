@@ -1,9 +1,9 @@
 import numpy
 import scipy.constants as codata
 
+from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
 except: pass
-from dabax.dabax_xraylib import DabaxXraylib
 
 def cross_calc(descriptor, energy, calculate=0, unit=None, density=None, verbose=True,
                material_constants_library=None,):
@@ -39,7 +39,7 @@ def cross_calc(descriptor, energy, calculate=0, unit=None, density=None, verbose
         symbol = material_constants_library.AtomicNumberToSymbol(descriptor)
 
     if isinstance(material_constants_library, DabaxXraylib):
-        pass
+        tmp = None
     else:
         tmp = numpy.zeros_like(energy)
 

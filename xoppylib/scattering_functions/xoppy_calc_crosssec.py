@@ -1,8 +1,5 @@
 import numpy
 
-try: import xraylib
-except: pass
-
 from xoppylib.scattering_functions.cross_calc import cross_calc, cross_calc_mix, cross_calc_nist
 
 def xoppy_calc_crosssec(
@@ -31,6 +28,8 @@ def xoppy_calc_crosssec(
             energy = numpy.linspace(GRIDSTART,GRIDEND,GRIDN)
     elif GRID == 2:
         energy = numpy.array([GRIDSTART])
+    else:
+        raise ValueError("GRID must be 0, 1 or 2")
 
     if MAT_FLAG == 0: # element
         out =  cross_calc(descriptor,energy,calculate=CALCULATE,density=density,
@@ -41,6 +40,8 @@ def xoppy_calc_crosssec(
     elif MAT_FLAG == 2: # NIST compound
         out =  cross_calc_nist(descriptor,energy,calculate=CALCULATE,
                           material_constants_library=material_constants_library)
+    else:
+        raise ValueError("MAT_FLAG must be 0, 1 or 2")
 
     calculate_items = ['Total','PhotoElectric','Rayleigh','Compton','Total minus Rayleigh']
     unit_items = ['barn/atom','cm^2','cm^2/g','cm^-1']

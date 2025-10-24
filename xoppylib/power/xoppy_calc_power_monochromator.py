@@ -147,8 +147,6 @@ if __name__ == "__main__":
     # print(xoppy_calc_power_monochromator(TYPE=3, ML_H5_FILE="/users/srio/Oasys/multilayerTiC.h5", ML_GRAZING_ANGLE_DEG=0.4))
 
     if 1: # mlayer
-        import numpy
-
         energy = numpy.linspace(4000, 30000, 100)
         spectral_power = numpy.ones(100)
 
@@ -156,10 +154,7 @@ if __name__ == "__main__":
         # script to make the calculations (created by XOPPY:xpower)
         #
 
-        import numpy
         from xoppylib.power.xoppy_calc_power_monochromator import xoppy_calc_power_monochromator
-        import xraylib
-        from dabax.dabax_xraylib import DabaxXraylib
 
         out_dictionary = xoppy_calc_power_monochromator(
             energy,  # array with energies in eV

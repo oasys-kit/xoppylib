@@ -1,5 +1,6 @@
 import numpy
 
+from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
 except: pass
 
@@ -11,11 +12,9 @@ from dabax.common_tools import f0_xop, f0_xop_with_fractional_charge
 from dabax.common_tools import bragg_metrictensor, lorentz, atomic_symbols
 
 
-import sys
 import os
 import platform
 from xoppylib.xoppy_util import locations
-from dabax.dabax_xraylib import DabaxXraylib
 
 #
 #
@@ -1703,7 +1702,6 @@ def run_diff_pat(
 
 if __name__ == "__main__":
 
-    from dabax.dabax_xraylib import DabaxXraylib
     dx = DabaxXraylib()
 
     if False:

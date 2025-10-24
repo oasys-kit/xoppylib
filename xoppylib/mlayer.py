@@ -27,6 +27,7 @@ The stack is as follows: Vacuum+[Odd,Even]xn+Substrate
 import numpy
 import scipy.constants as codata
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
+from dabax.dabax_xraylib import DabaxXraylib
 
 tocm = codata.h * codata.c / codata.e*1e2 # 12398.419739640718e-8
 
@@ -333,6 +334,8 @@ class MLayer(object):
         if use_xraylib_or_dabax == 0:
             try: import xraylib
             except: "xraylib not available"
+        else:
+            if dabax is None: dabax = DabaxXraylib()
 
         #--- From input keywords...
         fileout = FILE
@@ -588,14 +591,11 @@ class MLayer(object):
         """
 
         if use_xraylib_or_dabax == 0:
-            try:
-                import xraylib
-                material_constant_library = xraylib
-            except:
-                raise ValueError("xraylib not available")
-
+            try: import xraylib
+            except: "xraylib not available"
+            material_constant_library = xraylib
         else:
-            material_constant_library = dabax
+            material_constant_library = dabax if not dabax is None else DabaxXraylib()
 
         if GRADE_DEPTH == 0:
             npair = int(bilayer_pairs)
@@ -800,7 +800,7 @@ class MLayer(object):
             except: "xraylib not available"
             material_constant_library = xraylib
         else:
-            material_constant_library = dabax
+            material_constant_library = dabax if not dabax is None else DabaxXraylib()
 
         #
         # parse
@@ -1194,8 +1194,6 @@ class MLayer(object):
                     DELO[i]  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
                     BETO[i]  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
         elif self.using_pre_mlayer == 0: # not using preprocessor, using xraylib
-            try: import xraylib
-            except: "xraylib not available"
             if is_monochromatic:
                 DELS[:]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
                 BETS[:]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
@@ -1537,7 +1535,6 @@ class MLayer(object):
 
 
 if __name__ == "__main__":
-    from dabax.dabax_xraylib import DabaxXraylib
     from srxraylib.plot.gol import plot
 
     if 1:

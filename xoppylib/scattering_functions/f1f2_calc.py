@@ -3,10 +3,10 @@ import scipy.constants as codata
 
 from xoppylib.scattering_functions.fresnel import interface_reflectivity
 
+from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
 except: pass
 
-from dabax.dabax_xraylib import DabaxXraylib
 
 
 def f1f2_calc(descriptor, energy, theta=3.0e-3, F=0, density=None, rough=0.0, verbose=True,

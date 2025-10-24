@@ -1,6 +1,7 @@
 
 import numpy
 
+from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
 except: pass
 
@@ -181,7 +182,7 @@ def create_bragg_preprocessor_file_v1(interactive=True,
 if __name__ == "__main__":
 
     from xoppylib.crystals.bragg_preprocessor_file_io import bragg_preprocessor_file_v1_read
-    from dabax.dabax_xraylib import DabaxXraylib
+
 
     for method in [0,1]:
         if method == 0:

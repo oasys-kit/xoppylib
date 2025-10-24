@@ -10,7 +10,7 @@ except ImportError:
     print(sys.exc_info()[1])
     pass
 
-
+from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
 except: pass
 
@@ -79,11 +79,14 @@ class XoppyPhysics:
         if material_formula is None: return 0.0
         if str(material_formula.strip()) == "": return 0.0
 
+        try:    material_constants_library = xraylib
+        except: material_constants_library = DabaxXraylib()
+
         try:
-            compoundData = xraylib.CompoundParser(material_formula)
+            compoundData = material_constants_library.CompoundParser(material_formula)
 
             if compoundData["nElements"] == 1:
-                return xraylib.ElementDensity(compoundData["Elements"][0])
+                return material_constants_library.ElementDensity(compoundData["Elements"][0])
             else:
                 return 0.0
         except:
