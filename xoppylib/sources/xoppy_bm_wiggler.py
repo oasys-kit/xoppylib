@@ -106,7 +106,7 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
         if LOG_CHOICE == 0:
             cumulated_power = spectral_power.cumsum() * numpy.abs(energy_ev[0] - energy_ev[1])
             # print("\nPower from integral of spectrum (sum rule): %8.3f %s" % (cumulated_power[-1], cumulated_power_unit))
-            print("\nPower from integral of spectrum (trapz rule): %8.3f %s" % (numpy.trapz(spectral_power, energy_ev), cumulated_power_unit))
+            print("\nPower from integral of spectrum (trapz rule): %8.3f %s" % (numpy.trapezoid(spectral_power, energy_ev), cumulated_power_unit))
         else:
             cumulated_power = numpy.zeros_like(energy_ev)
             for i in range(1, energy_ev.size):
@@ -328,8 +328,8 @@ def trapezoidal_rule_2d_1darrays(data2D,h=None,v=None):
         h = numpy.arange(data2D.shape[0])
     if v is None:
         v = numpy.arange(data2D.shape[1])
-    totPower2 = numpy.trapz(data2D, v, axis=1)
-    totPower2 = numpy.trapz(totPower2, h, axis=0)
+    totPower2 = numpy.trapezoid(data2D, v, axis=1)
+    totPower2 = numpy.trapezoid(totPower2, h, axis=0)
     return totPower2
 
 
@@ -664,8 +664,8 @@ def trapezoidal_rule_2d_1darrays(data2D,h=None,v=None):
         h = numpy.arange(data2D.shape[0])
     if v is None:
         v = numpy.arange(data2D.shape[1])
-    totPower2 = numpy.trapz(data2D, v, axis=1)
-    totPower2 = numpy.trapz(totPower2, h, axis=0)
+    totPower2 = numpy.trapezoid(data2D, v, axis=1)
+    totPower2 = numpy.trapezoid(totPower2, h, axis=0)
     return totPower2
 
 

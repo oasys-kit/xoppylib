@@ -614,8 +614,8 @@ def trapezoidal_rule_2d(data2D,H=None,V=None):
     else:
         VV = V[0, :]
 
-    totPower2 = numpy.trapz(data2D, VV, axis=1)
-    totPower2 = numpy.trapz(totPower2, HH, axis=0)
+    totPower2 = numpy.trapezoid(data2D, VV, axis=1)
+    totPower2 = numpy.trapezoid(totPower2, HH, axis=0)
     return totPower2
 
 def trapezoidal_rule_2d_1darrays(data2D,h=None,v=None):
@@ -623,8 +623,8 @@ def trapezoidal_rule_2d_1darrays(data2D,h=None,v=None):
         h = numpy.arange(data2D.shape[0])
     if v is None:
         v = numpy.arange(data2D.shape[1])
-    totPower2 = numpy.trapz(data2D, v, axis=1)
-    totPower2 = numpy.trapz(totPower2, h, axis=0)
+    totPower2 = numpy.trapezoid(data2D, v, axis=1)
+    totPower2 = numpy.trapezoid(totPower2, h, axis=0)
     return totPower2
 
 def debug_plot_3d(zs,xs,ys,title=""):

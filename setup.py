@@ -54,7 +54,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.46'
+VERSION = '1.0.48'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'
@@ -82,10 +82,6 @@ CLASSIFIERS = [
     'Environment :: Console',
     'Environment :: Plugins',
     'Programming Language :: Python :: 3',
-    'License :: OSI Approved :: '
-    'GNU General Public License v3 or later (GPLv3+)',
-    'Operating System :: POSIX',
-    'Operating System :: Microsoft :: Windows',
     'Topic :: Scientific/Engineering :: Visualization',
     'Topic :: Software Development :: Libraries :: Python Modules',
     'Intended Audience :: Education',
@@ -97,15 +93,11 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
-    'srxraylib>=1.0.63',
+    'srxraylib>=1.0.66',
     'pySRU',
     'h5py',
     'dabax>=1.0.10',
     'crystalpy',
-)
-
-SETUP_REQUIRES = (
-    'setuptools',
 )
 
 PACKAGES = [
@@ -141,7 +133,6 @@ def setup_package():
         zip_safe=False,  # the package can run out of an .egg file
         include_package_data=True,
         install_requires=INSTALL_REQUIRES,
-        setup_requires=SETUP_REQUIRES,
     )
 
 if __name__ == '__main__':

@@ -26,8 +26,8 @@ def integral_2d(data2D,h=None,v=None, method=0):
         v = numpy.arange(data2D.shape[1])
 
     if method == 0:
-        totPower2 = numpy.trapz(data2D, v, axis=1)
-        totPower2 = numpy.trapz(totPower2, h, axis=0)
+        totPower2 = numpy.trapezoid(data2D, v, axis=1)
+        totPower2 = numpy.trapezoid(totPower2, h, axis=0)
     else:
         totPower2 = data2D.sum() * (h[1] - h[0]) * (v[1] - v[0])
 
@@ -44,9 +44,9 @@ def integral_3d(data3D, e=None, h=None, v=None, method=0):
 
     if method == 0:
 
-        totPower2 = numpy.trapz(data3D, v, axis=2)
-        totPower2 = numpy.trapz(totPower2, h, axis=1)
-        totPower2 = numpy.trapz(totPower2, e, axis=0)
+        totPower2 = numpy.trapezoid(data3D, v, axis=2)
+        totPower2 = numpy.trapezoid(totPower2, h, axis=1)
+        totPower2 = numpy.trapezoid(totPower2, e, axis=0)
     else:
         totPower2 = data3D.sum() * (e[1] - e[0]) * (h[1] - h[0]) * (v[1] - v[0])
 
@@ -603,7 +603,7 @@ def write_txt_file(calculated_data, input_beam_content, filename="tmp.txt", meth
     p_spectral_power = p * codata.e * 1e3
 
     absorbed3d = p_spectral_power * absorbance / (H[0] / h0[0]) / (V[0] / v0[0])
-    absorbed2d = numpy.trapz(absorbed3d, E, axis=0)
+    absorbed2d = numpy.trapezoid(absorbed3d, E, axis=0)
 
     f = open(filename, 'w')
     if method == "3columns":
@@ -664,12 +664,12 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
                       title_1="X [mm] (normal to beam)",
                       title_2="Y [mm] (normal to beam)")
 
-        h5w.add_image(numpy.trapz(p_spectral_power, E, axis=0) , H, V,
+        h5w.add_image(numpy.trapezoid(p_spectral_power, E, axis=0) , H, V,
                       image_name="Power Density", entry_name=entry_name,
                       title_x="X [mm] (normal to beam)",
                       title_y="Y [mm] (normal to beam)")
 
-        h5w.add_dataset(E, numpy.trapz(numpy.trapz(p_spectral_power, v, axis=2), h, axis=1),
+        h5w.add_dataset(E, numpy.trapezoid(numpy.trapezoid(p_spectral_power, v, axis=2), h, axis=1),
                         entry_name=entry_name, dataset_name="Spectral power",
                         title_x="Photon Energy [eV]",
                         title_y="Spectral density [W/eV]")
@@ -691,12 +691,12 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
                       title_2="Y [mm] (o.e. coordinates)")
 
         absorbed = p_spectral_power * absorbance / (H[0] / h0[0]) / (V[0] / v0[0])
-        h5w.add_image(numpy.trapz(absorbed, E, axis=0), H, V,
+        h5w.add_image(numpy.trapezoid(absorbed, E, axis=0), H, V,
                       image_name="Absorbed Power Density on Element", entry_name=entry_name,
                       title_x="X [mm] (o.e. coordinates)",
                       title_y="Y [mm] (o.e. coordinates)")
 
-        h5w.add_dataset(E, numpy.trapz(numpy.trapz(absorbed, v, axis=2), h, axis=1),
+        h5w.add_dataset(E, numpy.trapezoid(numpy.trapezoid(absorbed, v, axis=2), h, axis=1),
                         entry_name=entry_name, dataset_name="Absorbed Spectral Power",
                         title_x="Photon Energy [eV]",
                         title_y="Spectral density [W/eV]")
@@ -712,12 +712,12 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
             v *= EL1_VMAG
 
         transmitted = p_spectral_power * transmittance / (h[0] / h0[0]) / (v[0] / v0[0])
-        h5w.add_image(numpy.trapz(transmitted, E, axis=0), h, v,
+        h5w.add_image(numpy.trapezoid(transmitted, E, axis=0), h, v,
                       image_name="Transmitted Power Density on Element", entry_name=entry_name,
                       title_x="X [mm] (normal to beam)",
                       title_y="Y [mm] (normal to beam)")
 
-        h5w.add_dataset(E, numpy.trapz(numpy.trapz(transmitted, v, axis=2), h, axis=1),
+        h5w.add_dataset(E, numpy.trapezoid(numpy.trapezoid(transmitted, v, axis=2), h, axis=1),
                         entry_name=entry_name, dataset_name="Transmitted Spectral Power",
                         title_x="Photon Energy [eV]",
                         title_y="Spectral density [W/eV]")
