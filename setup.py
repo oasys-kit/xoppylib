@@ -54,7 +54,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.49'
+VERSION = '1.0.50'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'
@@ -102,6 +102,9 @@ INSTALL_REQUIRES = (
 
 PACKAGES = [
     "xoppylib",
+    "xoppylib.crystals",
+    "xoppylib.decorators",
+    "xoppylib.sources",
     "xoppylib.srcalc",
 ]
 

@@ -37,14 +37,14 @@ class locations:
     @classmethod
     def home_doc(cls):
         if platform.system() == "Windows":
-            return package_dirname("xoppylib") + "\\doc_txt/"
+            return package_dirname("xoppylib") + "\\doc_txt\\"
         else:
             return package_dirname("xoppylib") + "/doc_txt/"
 
     @classmethod
     def home_data(cls):
         if platform.system() == "Windows":
-            return package_dirname("xoppylib") + "\\data/"
+            return package_dirname("xoppylib") + "\\data\\"
         else:
             return package_dirname("xoppylib") + "/data/"
 
