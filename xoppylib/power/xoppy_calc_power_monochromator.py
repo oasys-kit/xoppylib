@@ -27,6 +27,7 @@ def xoppy_calc_power_monochromator(energies=None,                    # array wit
                                    external_reflectivity_file='',    # file with external reflectivity
                                    output_file="monochromator.spec", # filename if FILE_DUMP=1
                                    crystal_descriptor="Si",          # for TYPE in [0,1] the crystal descriptor accepted by dabax or xraylib
+                                   h_miller=1, k_miller=1, l_miller=1, # for TYPE in [0,1] the Miller indices
                                    material_constants_library=None,  # xraylib or DabaxXraylib()
                                    ):
 
@@ -42,6 +43,7 @@ def xoppy_calc_power_monochromator(energies=None,                    # array wit
                                                                       energy_setup=ENER_SELECTED,
                                                                       calculation_method=METHOD,
                                                                       crystal_descriptor=crystal_descriptor,
+                                                                      h_miller=h_miller, k_miller=k_miller, l_miller=l_miller,
                                                                       material_constants_library=material_constants_library)
     elif TYPE == 2:
         Mono_Effect, Mono_Effect_p = power1d_calc_laue_monochromator(energies=energies,
@@ -49,6 +51,7 @@ def xoppy_calc_power_monochromator(energies=None,                    # array wit
                                                                      calculation_method=METHOD,
                                                                      thickness=THICK * 1e-6,
                                                                      crystal_descriptor=crystal_descriptor,
+                                                                     h_miller=h_miller, k_miller=k_miller, l_miller=l_miller,
                                                                      material_constants_library=material_constants_library)
     elif TYPE == 3:
         Mono_Effect, Mono_Effect_p = power1d_calc_multilayer_monochromator(ML_H5_FILE,
