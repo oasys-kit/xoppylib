@@ -63,8 +63,10 @@ def power1d_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(
 
     if energies[0] != energies[-1]:
         # I0 = source[0:-1].sum()*(energies[1]-energies[0])
-        I0 = numpy.trapezoid(source, x=energies, axis=-1)
-        P0 = numpy.trapezoid(source / (codata.e * energies), x=energies, axis=-1)
+        try:    I0 = numpy.trapezoid(source, x=energies, axis=-1)
+        except: I0 = numpy.trapz(source, x=energies, axis=-1)
+        try:    P0 = numpy.trapezoid(source / (codata.e * energies), x=energies, axis=-1)
+        except: P0 = numpy.trapz(source / (codata.e * energies), x=energies, axis=-1)
         txt += "\n  Incoming power (integral of spectrum): %g W (%g photons)\n" % (I0, P0)
 
         I1 = I0
@@ -157,8 +159,10 @@ def power1d_calc(energies=numpy.linspace(1000.0,50000.0,100), source=numpy.ones(
             cumulated *= rs
 
         if energies[0] != energies[-1]:
-            I2 = numpy.trapezoid( cumulated, x=energies, axis=-1)
-            P2 = numpy.trapezoid( cumulated / (codata.e * energies) , x=energies, axis=-1)
+            try:    I2 = numpy.trapezoid( cumulated, x=energies, axis=-1)
+            except: I2 = numpy.trapz( cumulated, x=energies, axis=-1)
+            try:    P2 = numpy.trapezoid( cumulated / (codata.e * energies) , x=energies, axis=-1)
+            except: P2 = numpy.trapz(cumulated / (codata.e * energies), x=energies, axis=-1)
             txt += "      Outcoming power: %f  W (%g photons)\n" % (I2, P2)
             txt += "      Absorbed power:  %f W (%g photons)\n" % (I1 - I2, P1 - P2)
             txt += "      Normalized Outcoming Power: %f\n" % (I2 / I0)
