@@ -32,10 +32,8 @@
 #     cd xoppylib
 #     python -m pip install -e . --no-deps --no-binary :all:
 #
-# Upload to pypi (when uploading, increment the version number):
-#     python setup.py register (only once, not longer needed)
-#     python setup.py sdist
-#     python setup.py upload
+# ** IMPORTANT **
+# Do not upload this package in pypi from a windows machine (it changes the mode +x in binaries)
 #          
 # Install from pypi:
 #     pip install <name>
@@ -43,7 +41,7 @@
 
 __authors__ = ["M Sanchez del Rio"]
 __license__ = "MIT"
-__date__ = "2021-2025"
+__date__ = "2021-2026"
 
 import os
 
@@ -54,7 +52,7 @@ except AttributeError:
 
 NAME = 'xoppylib'
 
-VERSION = '1.0.51'
+VERSION = '1.0.52'
 ISRELEASED = True
 
 DESCRIPTION = 'XOPPY library'

@@ -1,4 +1,4 @@
-import sys, os, numpy, platform, six
+import sys, os, numpy, platform, importlib, six
 
 try:
     import matplotlib
@@ -17,14 +17,23 @@ except: pass
 import scipy.constants as codata
 
 def package_dirname(package):
-    """Return the directory path where package is located.
+    """Return the directory path where a package or module is located.
 
+    Works with regular and namespace packages.
     """
     if isinstance(package, six.string_types):
-        package = __import__(package, fromlist=[""])
-    filename = package.__file__
-    dirname = os.path.dirname(filename)
-    return dirname
+        package = importlib.import_module(package)
+
+    # Regular package or module
+    if hasattr(package, "__file__") and package.__file__:
+        return os.path.dirname(os.path.abspath(package.__file__))
+
+    # Namespace package (PEP 420)
+    if hasattr(package, "__path__"):
+        # __path__ is a _NamespacePath (iterable)
+        return os.path.abspath(next(iter(package.__path__)))
+
+    raise ValueError(f"Cannot determine directory for package {package!r}")
 
 class locations:
     @classmethod

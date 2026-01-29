@@ -671,6 +671,13 @@ def xoppy_calc_xcom(NAME="Pyrex Glass",SUBSTANCE=3,DESCRIPTION="SiO2:B2O3:Na2O:A
                      GRIDDATA="0.0804:0.2790:0.6616:1.3685:2.7541",ELEMENTOUTPUT=0):
     print("Inside xoppy_calc_xxcom. ")
 
+    files = ["xcom.out","xcom.spec"]
+    for file in files:
+        try:
+            os.remove(os.path.join(locations.home_bin_run(),file))
+        except:
+            pass
+
     try:
         with open("xoppy.inp","wt") as f:
             f.write(os.path.join(locations.home_data(), 'xcom')+ os.sep + "\n" )
@@ -698,7 +705,7 @@ def xoppy_calc_xcom(NAME="Pyrex Glass",SUBSTANCE=3,DESCRIPTION="SiO2:B2O3:Na2O:A
                         f.write(i+"\n")
                     if (1+GRID) != 1:
                         f.write("N\n")
-            f.write("%s\n" % GRIDDATA)
+            f.write("%s\n" % "xcom.out")
             f.write("1\n")
             f.close()
 
