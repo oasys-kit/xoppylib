@@ -366,8 +366,7 @@ def xoppy_calc_yaup(
         message += ' PERIOD/NPTS. See HELP/YAUP for definitions of PERIOD and NPTS.'
         message += ' There should be NPTS*NPER+1 lines in the ASCII file.'
 
-        ok = showConfirmMessage(message, "OK?")
-        if not ok: return
+        print(message)
 
         f = open('txt2u.inp', 'w')
         f.write("%s\n" % (BFIELD_ASCIIFILE) )
@@ -411,7 +410,7 @@ def xoppy_calc_yaup(
         n = NPER
         lambdau = PERIOD_BFIELD
         npts_per = NPTS_BFIELD
-        if ITYPE == 0:
+        if I2TYPE == 0: # L.Rebuffi 29/1/2026
             b1 = A1
             b2 = A2
         else:
