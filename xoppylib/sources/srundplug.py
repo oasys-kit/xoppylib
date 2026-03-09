@@ -42,6 +42,8 @@ import numpy
 import shutil # to copy files
 import platform
 
+from xoppylib.sources.parse_urgent import parse_urgent_2d_from_harmonics
+
 #SRW
 USE_URGENT= True
 USE_US = True
@@ -1276,6 +1278,88 @@ def calc2d_urgent(bl,zero_emittance=False,fileName=None,fileAppend=False,hSlitPo
 
     return (hhh, vvv, int_mesh2)
 
+
+def calc2d_from_harmonics_urgent(bl, zero_emittance=False, fileName=None, fileAppend=False,
+                                 hSlitPoints=21, vSlitPoints=51, harmonic_max=200):
+
+    r"""
+        run Urgent for calculating power density storing the power density per individual harmonics
+
+        input: a dictionary with beamline
+        output: file name with results
+    """
+    global scanCounter
+    global home_bin
+    print("Inside calc2d_urgent")
+
+    for file in ["urgent.inp","urgent.out"]:
+        try:
+            os.remove(os.path.join(locations.home_bin_run(),file))
+        except:
+            pass
+    try:
+        Kh = bl['Kh']
+    except:
+        Kh = 0.0
+
+    try:
+        Kphase = bl['Kphase']
+    except:
+        Kphase = 0.0
+
+    with open("urgent.inp","wt") as f:
+        f.write("%d\n"%(1))               # ITYPE
+        f.write("%f\n"%(bl['PeriodID']))  # PERIOD
+        f.write("%f\n"%(Kh))         #KX
+        f.write("%f\n"%(bl['Kv']))        #KY
+        f.write("%f\n"%(Kphase*180.0/numpy.pi))         #PHASE
+        f.write("%d\n"%(bl['NPeriods']))         #N
+
+        f.write("1000.0\n")                #EMIN
+        f.write("100000.0\n")              #EMAX
+        f.write("1\n")                     #NENERGY
+
+        f.write("%f\n"%(bl['ElectronEnergy']))                #ENERGY
+        f.write("%f\n"%(bl['ElectronCurrent']))               #CUR
+        f.write("%f\n"%(bl['ElectronBeamSizeH']*1e3))         #SIGX
+        f.write("%f\n"%(bl['ElectronBeamSizeV']*1e3))         #SIGY
+        f.write("%f\n"%(bl['ElectronBeamDivergenceH']*1e3))   #SIGX1
+        f.write("%f\n"%(bl['ElectronBeamDivergenceV']*1e3))   #SIGY1
+
+        f.write("%f\n"%(bl['distance']))         #D
+        f.write("%f\n"%(0.00000))         #XPC
+        f.write("%f\n"%(0.00000))         #YPC
+        f.write("%f\n"%(bl['gapH']*1e3))  #XPS
+        f.write("%f\n"%(bl['gapV']*1e3))  #YPS
+        f.write("%d\n"%(hSlitPoints-1))             #NXP
+        f.write("%d\n"%(vSlitPoints-1))             #NYP
+
+        f.write("%d\n"%(-6))               #MODE
+        if zero_emittance:                #ICALC
+            f.write("%d\n"%(2))
+        else:
+            f.write("%d\n"%(1))
+        f.write("%d\n"%(-harmonic_max))   #IHARM
+
+        f.write("%d\n"%(0))               #NPHI
+        f.write("%d\n"%(0))               #NSIG
+        f.write("%d\n"%(0))               #NALPHA
+        f.write("%f\n"%(0.00000))         #DALPHA
+        f.write("%d\n"%(0))               #NOMEGA
+        f.write("%f\n"%(0.00000))         #DOMEGA
+
+    if platform.system() == "Windows":
+        command = os.path.join(home_bin,'urgent.exe < urgent.inp')
+    else:
+        command = "'" + os.path.join(home_bin,"urgent' < urgent.inp")
+    print("\n\n--------------------------------------------------------\n")
+    print("Running command '%s' in directory: %s \n"%(command,os.getcwd()))
+    os.system(command)
+    print("Done.")
+
+    harmonics, POWER_DENSITY, ENERGY, X_grid, Y_grid = parse_urgent_2d_from_harmonics("urgent.out")
+
+    return X_grid[:,0].copy(), Y_grid[0,:].copy(), POWER_DENSITY.sum(axis=0).copy(), POWER_DENSITY, ENERGY
 
 
 ########################################################################################################################
@@ -2916,7 +3000,7 @@ def plot_radiation(beamline_dict,stack=True,show=True):
             if stack:
                 sv = StackViewMainWindow()
                 SV.append(sv)
-                sv.setColormap("jet", autoscale=True)
+                sv.setColormap("jet")
                 sv.setStack(f)
                 sv.setGraphTitle(key)
                 sv.setKeepDataAspectRatio(True)
@@ -2932,7 +3016,7 @@ def plot_radiation(beamline_dict,stack=True,show=True):
                 plot_surface(f[int(e.size/2),:,:],h,v,title="%s %s; E=%g eV"%(beamline_dict['name'],key,e[int(e.size/2)]),
                              xtitle="H [mm]",ytitle="V [mm]",show=False)
 
-    if stack: app.exec_()
+    if stack: app.exec()
 
     if show: plot_show()
 
@@ -2989,6 +3073,8 @@ def main(radiance=True,flux=True,flux_from_3d=True,power_density=True):
     beamline['distance'] =   1.0*1e2
     beamline['gapH']      = 0.002*1e2 #0.001
     beamline['gapV']      = 0.002*1e2 #0.001
+    beamline['gapHcenter']      = 0.0
+    beamline['gapVcenter']      = 0.0
 
     # beamline['Kh'] = 1.87
     # beamline['Kphase'] = numpy.pi/3  # Phase of h component in rad (phase of v is zero)
@@ -3126,8 +3212,87 @@ def check_step_by_step():
         from numpy.testing import assert_almost_equal
         assert_almost_equal( numpy.abs( (F-F0) ) / F.max() , F*0, 3)
 
-
-
 if __name__ == '__main__':
-    # main(radiance=True,flux=False,flux_from_3d=False,power_density=False)
-    check_step_by_step()
+
+    if False:
+        main(radiance=True,flux=False,flux_from_3d=False,power_density=False)
+
+    if False:
+        check_step_by_step()
+
+    if False:
+        h5_parameters = dict()
+        h5_parameters["ELECTRONENERGY"] = 6.0
+        h5_parameters["ELECTRONENERGYSPREAD"] = 0.001
+        h5_parameters["ELECTRONCURRENT"] = 0.2
+        h5_parameters["ELECTRONBEAMSIZEH"] = 3.34281e-05
+        h5_parameters["ELECTRONBEAMSIZEV"] = 7.28139e-06
+        h5_parameters["ELECTRONBEAMDIVERGENCEH"] = 4.51097e-06
+        h5_parameters["ELECTRONBEAMDIVERGENCEV"] = 1.94034e-06
+        h5_parameters["PERIODID"] = 0.018
+        h5_parameters["NPERIODS"] = 111
+        h5_parameters["KV"] = 1.358
+        h5_parameters["KH"] = 0.0
+        h5_parameters["KPHASE"] = 0.0
+        h5_parameters["DISTANCE"] = 30.0
+        h5_parameters["GAPH"] = 0.01
+        h5_parameters["GAPV"] = 0.01
+        h5_parameters["HSLITPOINTS"] = 48
+        h5_parameters["VSLITPOINTS"] = 30
+        h5_parameters["METHOD"] = 1
+        h5_parameters["USEEMITTANCES"] = 1
+        h5_parameters["MASK_FLAG"] = 0
+        h5_parameters["MASK_ROT_H_DEG"] = 0.0
+        h5_parameters["MASK_ROT_V_DEG"] = 0.0
+        h5_parameters["MASK_H_MIN"] = -1000.0
+        h5_parameters["MASK_H_MAX"] = 1000.0
+        h5_parameters["MASK_V_MIN"] = -1000.0
+        h5_parameters["MASK_V_MAX"] = 1000.0
+
+        bl = dict()
+        bl['ElectronBeamDivergenceH'] = h5_parameters["ELECTRONBEAMDIVERGENCEH"]
+        bl['ElectronBeamDivergenceV'] = h5_parameters["ELECTRONBEAMDIVERGENCEV"]
+        bl['ElectronBeamSizeH']       = h5_parameters["ELECTRONBEAMSIZEH"]
+        bl['ElectronBeamSizeV']       = h5_parameters["ELECTRONBEAMSIZEV"]
+        bl['ElectronCurrent']         = h5_parameters["ELECTRONCURRENT"]
+        bl['ElectronEnergy']          = h5_parameters["ELECTRONENERGY"]
+        bl['ElectronEnergySpread']    = h5_parameters["ELECTRONENERGYSPREAD"]
+        bl['Kv']                      = h5_parameters["KV"]
+        bl['Kh']                      = h5_parameters["KH"]
+        bl['Kphase']                  = h5_parameters["KPHASE"]
+        bl['NPeriods']                = h5_parameters["NPERIODS"]
+        bl['PeriodID']                = h5_parameters["PERIODID"]
+        bl['distance']                = h5_parameters["DISTANCE"]
+        bl['gapH']                    = h5_parameters["GAPH"]
+        bl['gapV']                    = h5_parameters["GAPV"]
+
+        # horizontal, vertical, power_density = calc2d_urgent(bl, zero_emittance=False, fileName=None, fileAppend=False,
+        #                                     hSlitPoints=21, vSlitPoints=51)
+
+
+        X1, Y1, POWER_DENSITY1 = calc2d_urgent(bl,
+                                    zero_emittance=False, fileName=None, fileAppend=False,
+                                    hSlitPoints=h5_parameters["HSLITPOINTS"],
+                                    vSlitPoints=h5_parameters["VSLITPOINTS"],)
+
+
+        X, Y, POWER_DENSITY, POWER_DENSITY_HARMONICS, ENERGY_HARMONICS = calc2d_from_harmonics_urgent(bl,
+                                    zero_emittance=False, fileName=None, fileAppend=False,
+                                    hSlitPoints=h5_parameters["HSLITPOINTS"],
+                                    vSlitPoints=h5_parameters["VSLITPOINTS"],
+                                    harmonic_max=102)
+
+        # read_urgent("urgent.out")
+        # example plot
+        if 1:
+            from srxraylib.plot.gol import plot_image, plot_show
+
+            print(POWER_DENSITY.max(), POWER_DENSITY.shape, X.shape, Y.shape)
+            plot_image(POWER_DENSITY, X, Y, xtitle="H [mm]", ytitle="V [mm]", title="Power density W/mm2 **FROM HARMONICS**", show=0)
+
+            print(POWER_DENSITY1.max(), POWER_DENSITY1.shape, X1.shape, Y1.shape)
+            plot_image(POWER_DENSITY1, X1, Y1, xtitle="H [mm]", ytitle="V [mm]", title="Power density W/mm2", show=0)
+
+            plot_show()
+
+
