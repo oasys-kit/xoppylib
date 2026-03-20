@@ -1,6 +1,6 @@
-import numpy
 import numpy as np
 import re
+
 
 def parse_urgent_2d_from_harmonics(filepath, flag_full_grid=True):
     """
@@ -8,14 +8,12 @@ def parse_urgent_2d_from_harmonics(filepath, flag_full_grid=True):
 
     Returns
     -------
-    harmonics : list[int]
-        Harmonic numbers present (e.g. [1, 2, ..., 20]).
-        Index 0 of the first axis corresponds to harmonics[0].
-    POWER_DENSITY : ndarray, shape (n_harmonics, nX, nY)
-    ENERGY        : ndarray, shape (n_harmonics, nX, nY)
-        NaN for the summed "HARMONICS 1 TO N" block, which has no E column.
-    X_grid        : ndarray, shape (nX, nY)   — unique X values broadcast over Y
-    Y_grid        : ndarray, shape (nX, nY)   — unique Y values broadcast over X
+    harmonics     : list[int]               e.g. [1, 2, ..., 20] or [10]
+    POWER_DENSITY : ndarray (H, nX, nY)     W/mm² or W/mrad²
+    ENERGY        : ndarray (H, nX, nY)     eV  (NaN for summed block)
+    FLUX          : ndarray (H, nX, nY)     ph/s/0.1%BW
+    X_grid        : ndarray (nX, nY)        mm
+    Y_grid        : ndarray (nX, nY)        mm
     """
 
     fortran_float = re.compile(r'([+-]?\d+\.\d+)[Dd]([+-]?\d+)')
@@ -29,7 +27,6 @@ def parse_urgent_2d_from_harmonics(filepath, flag_full_grid=True):
     with open(filepath) as fh:
         text = fh.read()
 
-    # Each block starts at "ANGULAR DISTRIBUTION - HARMONIC"
     block_pattern = re.compile(
         r'ANGULAR DISTRIBUTION - (HARMONIC\s+\d+|HARMONICS\s+\d+\s+TO\s+\d+)',
         re.IGNORECASE
@@ -44,11 +41,9 @@ def parse_urgent_2d_from_harmonics(filepath, flag_full_grid=True):
     # ------------------------------------------------------------------ #
     # 2. Parse each block
     # ------------------------------------------------------------------ #
-    # data_by_harmonic: dict harmonic_number -> {'x':[], 'y':[], 'e':[], 'pd':[]}
     data_by_harmonic = {}
 
     for label, chunk in blocks:
-        # Determine harmonic number(s)
         m_single = re.match(r'HARMONIC\s+(\d+)', label, re.I)
         m_sum    = re.match(r'HARMONICS\s+(\d+)\s+TO\s+(\d+)', label, re.I)
 
@@ -56,16 +51,15 @@ def parse_urgent_2d_from_harmonics(filepath, flag_full_grid=True):
             harm = int(m_single.group(1))
             has_energy = True
         elif m_sum:
-            harm = 0          # use 0 as the "summed" key
+            harm = 0
             has_energy = False
         else:
             continue
 
-        rows_x, rows_y, rows_e, rows_pd = [], [], [], []
+        rows_x, rows_y, rows_e, rows_pd, rows_fl = [], [], [], [], []
 
         for line in chunk.splitlines():
             parts = line.split()
-            # Data lines: all parts are numeric
             if len(parts) < 4:
                 continue
             try:
@@ -73,18 +67,16 @@ def parse_urgent_2d_from_harmonics(filepath, flag_full_grid=True):
             except ValueError:
                 continue
 
-            if has_energy and len(vals) >= 4:
-                # X  Y  E  POWER_DENSITY  [FLUX ...]
-                rows_x.append(vals[0])
-                rows_y.append(vals[1])
-                rows_e.append(vals[2])
-                rows_pd.append(vals[3])
-            elif not has_energy and len(vals) >= 3:
-                # X  Y  POWER_DENSITY  [FLUX ...]
-                rows_x.append(vals[0])
-                rows_y.append(vals[1])
-                rows_e.append(np.nan)
-                rows_pd.append(vals[2])
+            if has_energy and len(vals) >= 5:
+                # X  Y  E  POWER_DENSITY  FLUX
+                rows_x.append(vals[0]);  rows_y.append(vals[1])
+                rows_e.append(vals[2]);  rows_pd.append(vals[3])
+                rows_fl.append(vals[4])
+            elif not has_energy and len(vals) >= 4:
+                # X  Y  POWER_DENSITY  FLUX
+                rows_x.append(vals[0]);  rows_y.append(vals[1])
+                rows_e.append(np.nan);   rows_pd.append(vals[2])
+                rows_fl.append(vals[3])
 
         if rows_x:
             data_by_harmonic[harm] = {
@@ -92,125 +84,99 @@ def parse_urgent_2d_from_harmonics(filepath, flag_full_grid=True):
                 'y':  np.array(rows_y),
                 'e':  np.array(rows_e),
                 'pd': np.array(rows_pd),
+                'fl': np.array(rows_fl),
             }
 
     # ------------------------------------------------------------------ #
-    # 3. Build the 2-D grid (X, Y axes) from harmonic 1
+    # 3. Build the 2-D grid from the first available harmonic
     # ------------------------------------------------------------------ #
-    ref = data_by_harmonic[1]          # harmonic 1 always present
+    first_harm = sorted(k for k in data_by_harmonic if k > 0)[0]
+    ref = data_by_harmonic[first_harm]
+
     x_unique = np.unique(ref['x'])
     y_unique = np.unique(ref['y'])
     nX, nY   = len(x_unique), len(y_unique)
 
-    X_grid, Y_grid = np.meshgrid(x_unique, y_unique, indexing='ij')  # (nX, nY)
+    X_grid, Y_grid = np.meshgrid(x_unique, y_unique, indexing='ij')
 
     # ------------------------------------------------------------------ #
     # 4. Assemble 3-D arrays  (harmonic, X, Y)
     # ------------------------------------------------------------------ #
-    # Keep only individual harmonics (exclude the summed block key=0)
     harmonics = sorted(k for k in data_by_harmonic if k > 0)
 
     POWER_DENSITY = np.full((len(harmonics), nX, nY), np.nan)
     ENERGY        = np.full((len(harmonics), nX, nY), np.nan)
+    FLUX          = np.full((len(harmonics), nX, nY), np.nan)
 
     x_idx = {v: i for i, v in enumerate(x_unique)}
     y_idx = {v: i for i, v in enumerate(y_unique)}
 
     for h_i, h in enumerate(harmonics):
         d = data_by_harmonic[h]
-        for x, y, e, pd in zip(d['x'], d['y'], d['e'], d['pd']):
-            xi = x_idx[x]
-            yi = y_idx[y]
+        for x, y, e, pd, fl in zip(d['x'], d['y'], d['e'], d['pd'], d['fl']):
+            xi = x_idx[x]; yi = y_idx[y]
             POWER_DENSITY[h_i, xi, yi] = pd
-            ENERGY[h_i, xi, yi]        = e
+            ENERGY       [h_i, xi, yi] = e
+            FLUX         [h_i, xi, yi] = fl
 
-    if not (numpy.isfinite(POWER_DENSITY)).all():
-        print("parse_urgent_2d_from_harmonics: Cleaned infinities in POWER_DENSITY")
-        POWER_DENSITY[~numpy.isfinite(POWER_DENSITY)] = 0.0
-    if not (numpy.isfinite(ENERGY)).all():
-        print("parse_urgent_2d_from_harmonics: Cleaned infinities in ENERGY")
-        ENERGY[~numpy.isfinite(ENERGY)] = 0.0
+    for name, arr in [('POWER_DENSITY', POWER_DENSITY),
+                      ('ENERGY',        ENERGY),
+                      ('FLUX',          FLUX)]:
+        if not np.isfinite(arr).all():
+            print(f"parse_urgent_2d_from_harmonics: Cleaned infinities in {name}")
+            arr[~np.isfinite(arr)] = 0.0
 
+    # ------------------------------------------------------------------ #
+    # 5. Optionally expand to four quadrants
+    # ------------------------------------------------------------------ #
     if flag_full_grid:
-        POWER_DENSITY_f = _expand_quadrant(POWER_DENSITY)
-        ENERGY_f = _expand_quadrant(ENERGY)
-        X_f, Y_f = _full_grid(X_grid[:, 0], Y_grid[0, :])
-        return harmonics, POWER_DENSITY_f, ENERGY_f, X_f, Y_f
-    else:
-        return harmonics, POWER_DENSITY, ENERGY, X_grid, Y_grid
+        POWER_DENSITY = _expand_quadrant(POWER_DENSITY)
+        ENERGY        = _expand_quadrant(ENERGY)
+        FLUX          = _expand_quadrant(FLUX)
+        X_grid, Y_grid = _full_grid(x_unique, y_unique)
+
+    return harmonics, POWER_DENSITY, ENERGY, FLUX, X_grid, Y_grid
 
 
 # ------------------------------------------------------------------ #
-# Four-quadrant expansion
+# Four-quadrant helpers
 # ------------------------------------------------------------------ #
 
 def _expand_quadrant(arr: np.ndarray) -> np.ndarray:
-    """
-    Mirror a one-quadrant array (..., nX, nY) to all four quadrants.
-
-    Assumes the last two axes are X (index 0 = x=0) and Y (index 0 = y=0).
-    The origin row/column is included exactly once.
-
-    Returns ndarray (..., 2*nX-1, 2*nY-1).
-    """
-    # Mirror X: flip rows [1:] and prepend  ->  -xmax ... 0 ... +xmax
+    """Mirror (..., nX, nY) → (..., 2*nX-1, 2*nY-1) by even symmetry."""
     full_x = np.concatenate([np.flip(arr[..., 1:, :], axis=-2), arr], axis=-2)
-    # Mirror Y: flip cols [1:] and prepend  ->  -ymax ... 0 ... +ymax
-    full   = np.concatenate([np.flip(full_x[..., 1:], axis=-1), full_x], axis=-1)
-    return full
+    return     np.concatenate([np.flip(full_x[..., 1:], axis=-1), full_x], axis=-1)
 
 
 def _full_grid(x_pos: np.ndarray, y_pos: np.ndarray):
-    """
-    Build full (X, Y) meshgrids from one-quadrant 1-D coordinate arrays.
-
-    Parameters
-    ----------
-    x_pos : 1-D array  (x >= 0, first element = 0)
-    y_pos : 1-D array  (y >= 0, first element = 0)
-
-    Returns
-    -------
-    X, Y : ndarray  (2*nX-1, 2*nY-1)
-    """
+    """Build full meshgrids from one-quadrant 1-D coordinate arrays."""
     x_full = np.concatenate([-x_pos[1:][::-1], x_pos])
     y_full = np.concatenate([-y_pos[1:][::-1], y_pos])
     return np.meshgrid(x_full, y_full, indexing='ij')
 
 
 # ------------------------------------------------------------------ #
-#
+# Main
 # ------------------------------------------------------------------ #
 if __name__ == '__main__':
-    import os
-
     filepath = 'urgent.out'
-    harmonics, POWER_DENSITY, ENERGY, X_grid, Y_grid = parse_urgent_2d_from_harmonics(filepath)
+    harmonics, POWER_DENSITY, ENERGY, FLUX, X_grid, Y_grid = \
+        parse_urgent_2d_from_harmonics(filepath)
 
-    print(f"Harmonics      : {harmonics}")
-    print(f"POWER_DENSITY  : shape={POWER_DENSITY.shape}, dtype={POWER_DENSITY.dtype}")
-    print(f"ENERGY         : shape={ENERGY.shape},        dtype={ENERGY.dtype}")
-    print(f"X_grid         : shape={X_grid.shape},        dtype={X_grid.dtype}")
-    print(f"Y_grid         : shape={Y_grid.shape},        dtype={Y_grid.dtype}")
-
-    # Quick sanity checks
-    print(f"\nX unique values (first 5): {X_grid[:, 0][:5]}")
-    print(f"Y unique values (first 5): {Y_grid[0, :][:5]}")
-    print(f"POWER_DENSITY[0, 0, 0] (harm 1, x=0, y=0): {POWER_DENSITY[0, 0, 0]:.4f}")
-    print(f"ENERGY[0, 0, 0]        (harm 1, x=0, y=0): {ENERGY[0, 0, 0]:.3f} eV")
-
-
-    print("Load with:  data = np.load('urgent_arrays.npz')")
-    print("            POWER_DENSITY = data['POWER_DENSITY']   # (harmonic, X, Y)")
-    print("            ENERGY        = data['ENERGY']          # (harmonic, X, Y)")
-    print("            X             = data['X']               # (X, Y)")
-    print("            Y             = data['Y']               # (X, Y)")
-    print("            harmonics     = data['harmonics']       # [1..20]")
+    print(f"harmonics     : {harmonics}")
+    print(f"POWER_DENSITY : shape={POWER_DENSITY.shape}, dtype={POWER_DENSITY.dtype}")
+    print(f"ENERGY        : shape={ENERGY.shape}")
+    print(f"FLUX          : shape={FLUX.shape}")
+    print(f"X_grid        : shape={X_grid.shape}  range {X_grid[0,0]} -> {X_grid[-1,0]}")
+    print(f"Y_grid        : shape={Y_grid.shape}  range {Y_grid[0,0]} -> {Y_grid[0,-1]}")
+    print(f"\nAt centre (x=0, y=0):")
+    cx, cy = X_grid.shape[0]//2, X_grid.shape[1]//2
+    print(f"  POWER_DENSITY[0] = {POWER_DENSITY[0, cx, cy]:.4f}")
+    print(f"  ENERGY[0]        = {ENERGY[0, cx, cy]:.3f} eV")
+    print(f"  FLUX[0]          = {FLUX[0, cx, cy]:.4e}")
 
     # print(X_grid.shape, Y_grid.shape, POWER_DENSITY.shape, ENERGY.shape)
     from srxraylib.plot.gol import plot_image
 
     plot_image(POWER_DENSITY.sum(axis=0), X_grid[:,0], Y_grid[0,:])
     # print(X_grid[:,0], Y_grid[0,:])
-
-

@@ -1280,7 +1280,9 @@ def calc2d_urgent(bl,zero_emittance=False,fileName=None,fileAppend=False,hSlitPo
 
 
 def calc2d_from_harmonics_urgent(bl, zero_emittance=False, fileName=None, fileAppend=False,
-                                 hSlitPoints=21, vSlitPoints=51, harmonic_max=200):
+                                 hSlitPoints=21, vSlitPoints=51, harmonic_max=200,
+                                 return_flux=0, # 0=return power density (default), 1=return, in addition,FLUX array
+                                 ):
 
     r"""
         run Urgent for calculating power density storing the power density per individual harmonics
@@ -1290,7 +1292,7 @@ def calc2d_from_harmonics_urgent(bl, zero_emittance=False, fileName=None, fileAp
     """
     global scanCounter
     global home_bin
-    print("Inside calc2d_urgent")
+    print("Inside calc2d_from_harmonics_urgent")
 
     for file in ["urgent.inp","urgent.out"]:
         try:
@@ -1357,9 +1359,90 @@ def calc2d_from_harmonics_urgent(bl, zero_emittance=False, fileName=None, fileAp
     os.system(command)
     print("Done.")
 
-    harmonics, POWER_DENSITY, ENERGY, X_grid, Y_grid = parse_urgent_2d_from_harmonics("urgent.out")
+    harmonics, POWER_DENSITY, ENERGY, FLUX, X_grid, Y_grid = parse_urgent_2d_from_harmonics("urgent.out")
+    if return_flux:
+        return X_grid[:,0].copy(), Y_grid[0,:].copy(), POWER_DENSITY.sum(axis=0).copy(), POWER_DENSITY, ENERGY, FLUX
+    else:
+        return X_grid[:,0].copy(), Y_grid[0,:].copy(), POWER_DENSITY.sum(axis=0).copy(), POWER_DENSITY, ENERGY
 
-    return X_grid[:,0].copy(), Y_grid[0,:].copy(), POWER_DENSITY.sum(axis=0).copy(), POWER_DENSITY, ENERGY
+def calc2d_from_harmonics_urgentpy(bl,
+                                   zero_emittance=False,
+                                   fileName=None, fileAppend=False,
+                                   hSlitPoints=21, vSlitPoints=51,
+                                   harmonic_max=None,
+                                   return_flux=0, # 0=return power density (default), 1=return, in addition,FLUX array
+                                   ):
+
+    r"""
+        run a pythonized code that mimics Urgent for calculating power density storing the power density per individual harmonics
+
+        input: a dictionary with beamline
+        output: file name with results
+    """
+    print("Inside calc2d_from_harmonics_urgentpy")
+    from xoppylib.sources.urgentpy_power_density_from_harmonics import power_density_all_harmonics
+
+    period_m  = bl["PeriodID"]
+    Ky        = bl["Kv"]
+    N_periods = bl["NPeriods"]
+    current_A = bl["ElectronCurrent"]
+    E_GeV     = bl["ElectronEnergy"]
+    Z_m       = bl["distance"]
+
+    gamma = 1e9 * E_GeV / (codata.m_e * codata.c**2 / codata.e)
+    B0    = Ky / (0.9336 * period_m * 1e2)
+
+
+    # ------------------------------------------------------------------ #
+    # Python calculation                                                   #
+    # ------------------------------------------------------------------ #
+
+    x_m = numpy.linspace(-bl["gapH"] / 2, bl["gapH"] / 2, 2 * hSlitPoints)
+    y_m = numpy.linspace(-bl["gapV"] / 2, bl["gapV"] / 2, 2 * vSlitPoints)
+    # XX, YY  = numpy.meshgrid(x_m, y_m)
+    XX = numpy.outer(x_m, numpy.ones_like(y_m))
+    YY = numpy.outer(numpy.ones_like(x_m), y_m)
+
+    theta_x = XX / Z_m
+    theta_y = YY / Z_m
+    dOmega  = (theta_x[0,1]-theta_x[0,0]) * (theta_y[1,0]-theta_y[0,0])
+
+    # t0 = time.time()
+    indiv_Wrad2 = power_density_all_harmonics(
+        Ky, N_periods, period_m, gamma, current_A,
+        theta_x, theta_y,
+        n_harmonics=harmonic_max,
+        p_max=None,              # adaptive — recommended
+        zero_emittance=zero_emittance,
+        sigma_x = bl["ElectronBeamSizeH"],
+        sigma_y = bl["ElectronBeamSizeV"],
+        sigma_xp= bl["ElectronBeamDivergenceH"],
+        sigma_yp= bl["ElectronBeamDivergenceV"],
+        distance_m=Z_m)
+
+    def harmonic_energy(n, K, period_m, gamma, thetaX, thetaY):
+        """Resonant photon energy [eV] for harmonic n on-axis."""
+        hc_eVm = codata.h * codata.c / codata.e  # 1239.84193e-9
+        return n * 2.0 * gamma ** 2 * hc_eVm / (period_m * (1.0 + K ** 2 / 2.0 + gamma**2 * thetaX * thetaY))
+
+    # 1. Python — Power density [W/mm²]
+
+    factor_Wrad2_to_Wmm2 = 1e-6 / Z_m ** 2
+    POWER_DENSITY = indiv_Wrad2 * factor_Wrad2_to_Wmm2
+    ENERGY = numpy.zeros_like(POWER_DENSITY)
+    for n in range(1, harmonic_max + 1):
+        Ei = harmonic_energy(n, Ky, period_m, gamma, theta_x, theta_y)
+        ENERGY[n - 1, :, :] = Ei # TODO put the pixel dependency
+
+    if return_flux:
+        # Spectral flux [ph/s/0.1%bw/rad²]
+        indiv_flux_rad2 = indiv_Wrad2 / (ENERGY * codata.e)
+        # Spectral flux [ph/s/0.1%bw/mm²]
+        indiv_flux_mm2 = indiv_flux_rad2 / Z_m ** 2 * 1e-6
+        return x_m * 1e3, y_m * 1e3, POWER_DENSITY.sum(axis=0), POWER_DENSITY, ENERGY, indiv_flux_mm2
+    else:
+        return x_m * 1e3, y_m * 1e3, POWER_DENSITY.sum(axis=0), POWER_DENSITY, ENERGY
+
 
 
 ########################################################################################################################
@@ -1657,8 +1740,6 @@ def calc3d_srw_step_by_step(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,ph
         e1 = numpy.interp(abs,cs,e)
         e1[0] = photonEnergyMin
         e1[-1] = photonEnergyMax
-        # print(">>>>>>>e ",e)
-        # print(">>>>>>>e1: ",e1)
         eArray = e1
     else:
         eArray = numpy.linspace(photonEnergyMin, photonEnergyMax, photonEnergyPoints, )
@@ -2042,9 +2123,6 @@ def calc3d_urgent(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergy
         for i in range(len(hArray)):
             for j in range(len(vArray)):
                 fout.write("%f  %f  %f\n"%(hArray[i],vArray[j],int_mesh2integrated[i,j]) )
-        #print(">>>>>>>>>>>>>>>power1",int_mesh2integrated.sum()*(hArray[1]-hArray[0])*(vArray[1]-vArray[0]))
-        #print(">>>>>>>>>>>>>>>power2",intensArray.sum()*codata.e*1e3*(eArray[1]-eArray[0]))
-        #print(">>>>>>>>>>>>>>>power3",int_mesh3.sum()*codata.e*1e3*(eArray[1]-eArray[0])*(hArray[1]-hArray[0])*(vArray[1]-vArray[0]))
 
         # now dump the spectrum as the sum
         scanCounter += 1
@@ -2243,11 +2321,6 @@ def calc3d_us(bl,photonEnergyMin=3000.0,photonEnergyMax=55000.0,photonEnergyPoin
     # now dump the integrated power
     # convert from phot/s/0,1%bw/mm2 to W/mm^2
     int_mesh2integrated = int_mesh2integrated *codata.e*1e3 * eStep
-
-    # print(">>>>>>>>>>>>>>>power1",int_mesh2integrated.sum()*(hArray[1]-hArray[0])*(vArray[1]-vArray[0]))
-    # if photonEnergyPoints > 1:
-    #     print(">>>>>>>>>>>>>>>power2",intensArray.sum()*codata.e*1e3*(eArray[1]-eArray[0]))
-    #     print(">>>>>>>>>>>>>>>power3",int_mesh3.sum()*codata.e*1e3*(eArray[1]-eArray[0])*(hArray[1]-hArray[0])*(vArray[1]-vArray[0]))
 
     if fileName is not None:
         scanCounter += 1
@@ -3051,182 +3124,190 @@ def calculate_power(bl):
                   (key,f.sum()*1e3*codata.e*e_step*(h[1]-h[0])*(v[1]-v[0]),txt))
 
 
-
-def main(radiance=True,flux=True,flux_from_3d=True,power_density=True):
-
-    #
-    # example fig 2-5 in X-ray Data Booklet #####################################################################
-    #
-
-    beamline = {}
-    beamline['name'] = "XRAY_BOOKLET"
-    beamline['ElectronBeamDivergenceH'] = 1e-20
-    beamline['ElectronBeamDivergenceV'] = 1e-20
-    beamline['ElectronBeamSizeH'] = 1e-20
-    beamline['ElectronBeamSizeV'] = 1e-20
-    beamline['ElectronEnergySpread'] = 1e-20
-    beamline['ElectronCurrent'] = 1.0
-    beamline['ElectronEnergy'] = 1.3
-    beamline['Kv'] = 1.87
-    beamline['NPeriods'] = 14
-    beamline['PeriodID'] = 0.035
-    beamline['distance'] =   1.0*1e2
-    beamline['gapH']      = 0.002*1e2 #0.001
-    beamline['gapV']      = 0.002*1e2 #0.001
-    beamline['gapHcenter']      = 0.0
-    beamline['gapVcenter']      = 0.0
-
-    # beamline['Kh'] = 1.87
-    # beamline['Kphase'] = numpy.pi/3  # Phase of h component in rad (phase of v is zero)
-
-    zero_emittance = True
-
-    # # example 6 in SRW ####################################################################################
-    #
-    # beamline = {}
-    # beamline['name'] = "SRW_EXAMPLE6"
-    # beamline['ElectronBeamDivergenceH'] = 1.65e-05
-    # beamline['ElectronBeamDivergenceV'] = 2.7472e-06
-    # beamline['ElectronBeamSizeH'] = 33.33e-6
-    # beamline['ElectronBeamSizeV'] = 2.912e-06
-    # beamline['ElectronEnergySpread'] = 0.00089
-    # beamline['ElectronCurrent'] = 0.5
-    # beamline['ElectronEnergy'] = 3.0
-    # beamline['Kv'] = 1.868
-    # beamline['NPeriods'] = 150
-    # beamline['PeriodID'] = 0.02
-    # beamline['distance'] = 30.0
-    # beamline['gapH'] = 0.04
-    # beamline['gapV'] = 0.03
-    #
-    # beamline['Kh'] = 1.868
-    # beamline['Kphase'] = 1.5  # Phase of h component in rad (phase of v is zero)
-    #
-    # zero_emittance = True
-
-
-    #
-    # Radiance
-    #
-
-    if radiance:
-        out = compare_radiation(beamline,zero_emittance=zero_emittance,npoints_grid=101)
-        plot_radiation(out)
-
-
-
-    #
-    # Flux
-    #
-
-    if flux:
-        out = compare_flux(beamline,emin=100,emax=900,npoints=200, zero_emittance=zero_emittance)
-        plot_flux(out)
-    if flux_from_3d:
-        out = compare_flux_from_3d(beamline,emin=100,emax=900,npoints=10,zero_emittance=zero_emittance)
-        plot_flux(out)
-
-    #
-    # Power density
-    #
-
-    if power_density:
-        out = compare_power_density(beamline,npoints_grid=51,zero_emittance=zero_emittance)
-        plot_power_density(out)
-
-
-def check_step_by_step():
-
-
-    ELECTRONENERGY = 6.04
-    ELECTRONENERGYSPREAD = 0.001
-    ELECTRONCURRENT = 0.2
-    ELECTRONBEAMSIZEH = 0.000395
-    ELECTRONBEAMSIZEV = 9.9e-06
-    ELECTRONBEAMDIVERGENCEH = 1.05e-05
-    ELECTRONBEAMDIVERGENCEV = 3.9e-06
-    PERIODID = 0.018
-    NPERIODS = 222
-    KV = 1.68
-    KH = 0.0
-    KPHASE = 0.0
-    DISTANCE = 30.0
-    SETRESONANCE = 0
-    HARMONICNUMBER = 1
-    GAPH = 0.003
-    GAPV = 0.003
-    HSLITPOINTS = 41
-    VSLITPOINTS = 41
-    METHOD = 2
-    PHOTONENERGYMIN = 6000.0
-    PHOTONENERGYMAX = 8500.0
-    PHOTONENERGYPOINTS = 20
-
-    bl = {}
-    bl['ElectronBeamDivergenceH'] = ELECTRONBEAMDIVERGENCEH
-    bl['ElectronBeamDivergenceV'] = ELECTRONBEAMDIVERGENCEV
-    bl['ElectronBeamSizeH'] = ELECTRONBEAMSIZEH
-    bl['ElectronBeamSizeV'] = ELECTRONBEAMSIZEV
-    bl['ElectronCurrent'] = ELECTRONCURRENT
-    bl['ElectronEnergy'] = ELECTRONENERGY
-    bl['ElectronEnergySpread'] = ELECTRONENERGYSPREAD
-    bl['Kv'] = KV
-    bl['Kh'] = KH
-    bl['Kphase'] = KPHASE
-    bl['NPeriods'] = NPERIODS
-    bl['PeriodID'] = PERIODID
-    bl['distance'] = DISTANCE
-    bl['gapH'] = GAPH
-    bl['gapV'] = GAPV
-
-
-    for emittance_flag in [True,False]:
-
-        e0,h0,v0,f0 = calc3d_srw(bl,
-                            photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,photonEnergyPoints=PHOTONENERGYPOINTS,
-                            hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
-                            zero_emittance=emittance_flag,fileName=None,fileAppend=False)
-
-        e,h,v,f = calc3d_srw_step_by_step(bl,
-                            photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,photonEnergyPoints=PHOTONENERGYPOINTS,
-                            hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
-                            zero_emittance=emittance_flag,fileName=None,fileAppend=False)
-
-
-
-
-        print("Shapes for SRW 0:",e0.shape,h0.shape,v0.shape,f0.shape)
-        print("Integral for SRW 0   :",f0.sum()*(h0[1]-h0[0])*(v0[1]-v0[0]) )
-
-        print("Shapes for SRW:",e.shape,h.shape,v.shape,f.shape)
-        print("Integral for SRW   :",f.sum()*(h[1]-h[0])*(v[1]-v[0]) )
-
-        from srxraylib.plot.gol import plot_image
-        # plot_image(f.sum(axis=0)-f0.sum(axis=0),h,v,title="Diff",show=False)
-
-        F0 = f.sum(axis=0)
-        F = f0.sum(axis=0)
-        # plot_image(F,h,v,title="New",show=False)
-        # plot_image(F0, h0, v0, title="Old")
-
-        from numpy.testing import assert_almost_equal
-        assert_almost_equal( numpy.abs( (F-F0) ) / F.max() , F*0, 3)
-
+#
+#
+#
 if __name__ == '__main__':
+    def main(radiance=True,flux=True,flux_from_3d=True,power_density=True):
 
+        #
+        # example fig 2-5 in X-ray Data Booklet #####################################################################
+        #
+
+        beamline = {}
+        beamline['name'] = "XRAY_BOOKLET"
+        beamline['ElectronBeamDivergenceH'] = 1e-20
+        beamline['ElectronBeamDivergenceV'] = 1e-20
+        beamline['ElectronBeamSizeH'] = 1e-20
+        beamline['ElectronBeamSizeV'] = 1e-20
+        beamline['ElectronEnergySpread'] = 1e-20
+        beamline['ElectronCurrent'] = 1.0
+        beamline['ElectronEnergy'] = 1.3
+        beamline['Kv'] = 1.87
+        beamline['NPeriods'] = 14
+        beamline['PeriodID'] = 0.035
+        beamline['distance'] =   1.0*1e2
+        beamline['gapH']      = 0.002*1e2 #0.001
+        beamline['gapV']      = 0.002*1e2 #0.001
+        beamline['gapHcenter']      = 0.0
+        beamline['gapVcenter']      = 0.0
+
+        # beamline['Kh'] = 1.87
+        # beamline['Kphase'] = numpy.pi/3  # Phase of h component in rad (phase of v is zero)
+
+        zero_emittance = True
+
+        # # example 6 in SRW ####################################################################################
+        #
+        # beamline = {}
+        # beamline['name'] = "SRW_EXAMPLE6"
+        # beamline['ElectronBeamDivergenceH'] = 1.65e-05
+        # beamline['ElectronBeamDivergenceV'] = 2.7472e-06
+        # beamline['ElectronBeamSizeH'] = 33.33e-6
+        # beamline['ElectronBeamSizeV'] = 2.912e-06
+        # beamline['ElectronEnergySpread'] = 0.00089
+        # beamline['ElectronCurrent'] = 0.5
+        # beamline['ElectronEnergy'] = 3.0
+        # beamline['Kv'] = 1.868
+        # beamline['NPeriods'] = 150
+        # beamline['PeriodID'] = 0.02
+        # beamline['distance'] = 30.0
+        # beamline['gapH'] = 0.04
+        # beamline['gapV'] = 0.03
+        #
+        # beamline['Kh'] = 1.868
+        # beamline['Kphase'] = 1.5  # Phase of h component in rad (phase of v is zero)
+        #
+        # zero_emittance = True
+
+
+        #
+        # Radiance
+        #
+
+        if radiance:
+            out = compare_radiation(beamline,zero_emittance=zero_emittance,npoints_grid=101)
+            plot_radiation(out)
+
+
+
+        #
+        # Flux
+        #
+
+        if flux:
+            out = compare_flux(beamline,emin=100,emax=900,npoints=200, zero_emittance=zero_emittance)
+            plot_flux(out)
+        if flux_from_3d:
+            out = compare_flux_from_3d(beamline,emin=100,emax=900,npoints=10,zero_emittance=zero_emittance)
+            plot_flux(out)
+
+        #
+        # Power density
+        #
+
+        if power_density:
+            out = compare_power_density(beamline,npoints_grid=51,zero_emittance=zero_emittance)
+            plot_power_density(out)
+
+    def check_step_by_step():
+
+
+        ELECTRONENERGY = 6.04
+        ELECTRONENERGYSPREAD = 0.001
+        ELECTRONCURRENT = 0.2
+        ELECTRONBEAMSIZEH = 0.000395
+        ELECTRONBEAMSIZEV = 9.9e-06
+        ELECTRONBEAMDIVERGENCEH = 1.05e-05
+        ELECTRONBEAMDIVERGENCEV = 3.9e-06
+        PERIODID = 0.018
+        NPERIODS = 222
+        KV = 1.68
+        KH = 0.0
+        KPHASE = 0.0
+        DISTANCE = 30.0
+        SETRESONANCE = 0
+        HARMONICNUMBER = 1
+        GAPH = 0.003
+        GAPV = 0.003
+        HSLITPOINTS = 41
+        VSLITPOINTS = 41
+        METHOD = 2
+        PHOTONENERGYMIN = 6000.0
+        PHOTONENERGYMAX = 8500.0
+        PHOTONENERGYPOINTS = 20
+
+        bl = {}
+        bl['ElectronBeamDivergenceH'] = ELECTRONBEAMDIVERGENCEH
+        bl['ElectronBeamDivergenceV'] = ELECTRONBEAMDIVERGENCEV
+        bl['ElectronBeamSizeH'] = ELECTRONBEAMSIZEH
+        bl['ElectronBeamSizeV'] = ELECTRONBEAMSIZEV
+        bl['ElectronCurrent'] = ELECTRONCURRENT
+        bl['ElectronEnergy'] = ELECTRONENERGY
+        bl['ElectronEnergySpread'] = ELECTRONENERGYSPREAD
+        bl['Kv'] = KV
+        bl['Kh'] = KH
+        bl['Kphase'] = KPHASE
+        bl['NPeriods'] = NPERIODS
+        bl['PeriodID'] = PERIODID
+        bl['distance'] = DISTANCE
+        bl['gapH'] = GAPH
+        bl['gapV'] = GAPV
+
+
+        for emittance_flag in [True,False]:
+
+            e0,h0,v0,f0 = calc3d_srw(bl,
+                                photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,photonEnergyPoints=PHOTONENERGYPOINTS,
+                                hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
+                                zero_emittance=emittance_flag,fileName=None,fileAppend=False)
+
+            e,h,v,f = calc3d_srw_step_by_step(bl,
+                                photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,photonEnergyPoints=PHOTONENERGYPOINTS,
+                                hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
+                                zero_emittance=emittance_flag,fileName=None,fileAppend=False)
+
+
+
+
+            print("Shapes for SRW 0:",e0.shape,h0.shape,v0.shape,f0.shape)
+            print("Integral for SRW 0   :",f0.sum()*(h0[1]-h0[0])*(v0[1]-v0[0]) )
+
+            print("Shapes for SRW:",e.shape,h.shape,v.shape,f.shape)
+            print("Integral for SRW   :",f.sum()*(h[1]-h[0])*(v[1]-v[0]) )
+
+            from srxraylib.plot.gol import plot_image
+            # plot_image(f.sum(axis=0)-f0.sum(axis=0),h,v,title="Diff",show=False)
+
+            F0 = f.sum(axis=0)
+            F = f0.sum(axis=0)
+            # plot_image(F,h,v,title="New",show=False)
+            # plot_image(F0, h0, v0, title="Old")
+
+            from numpy.testing import assert_almost_equal
+            assert_almost_equal( numpy.abs( (F-F0) ) / F.max() , F*0, 3)
+
+
+    #
+    # main checks
+    #
     if False:
         main(radiance=True,flux=False,flux_from_3d=False,power_density=False)
 
     if False:
         check_step_by_step()
 
-    if False:
+    if 1: # check power density from harmonics
+
+        zero_emittance = False
+
+
         h5_parameters = dict()
         h5_parameters["ELECTRONENERGY"] = 6.0
         h5_parameters["ELECTRONENERGYSPREAD"] = 0.001
         h5_parameters["ELECTRONCURRENT"] = 0.2
-        h5_parameters["ELECTRONBEAMSIZEH"] = 3.34281e-05
-        h5_parameters["ELECTRONBEAMSIZEV"] = 7.28139e-06
+        h5_parameters["ELECTRONBEAMSIZEH"]       = 3.34281e-05
+        h5_parameters["ELECTRONBEAMSIZEV"]       = 7.28139e-06
         h5_parameters["ELECTRONBEAMDIVERGENCEH"] = 4.51097e-06
         h5_parameters["ELECTRONBEAMDIVERGENCEV"] = 1.94034e-06
         h5_parameters["PERIODID"] = 0.018
@@ -3235,7 +3316,7 @@ if __name__ == '__main__':
         h5_parameters["KH"] = 0.0
         h5_parameters["KPHASE"] = 0.0
         h5_parameters["DISTANCE"] = 30.0
-        h5_parameters["GAPH"] = 0.01
+        h5_parameters["GAPH"] = 0.02
         h5_parameters["GAPV"] = 0.01
         h5_parameters["HSLITPOINTS"] = 48
         h5_parameters["VSLITPOINTS"] = 30
@@ -3271,27 +3352,47 @@ if __name__ == '__main__':
 
 
         X1, Y1, POWER_DENSITY1 = calc2d_urgent(bl,
-                                    zero_emittance=False, fileName=None, fileAppend=False,
+                                    zero_emittance=zero_emittance, fileName=None, fileAppend=False,
                                     hSlitPoints=h5_parameters["HSLITPOINTS"],
                                     vSlitPoints=h5_parameters["VSLITPOINTS"],)
 
-
-        X, Y, POWER_DENSITY, POWER_DENSITY_HARMONICS, ENERGY_HARMONICS = calc2d_from_harmonics_urgent(bl,
-                                    zero_emittance=False, fileName=None, fileAppend=False,
+        X, Y, POWER_DENSITY, POWER_DENSITY_HARMONICS, ENERGY_HARMONICS, FLUX = calc2d_from_harmonics_urgent(bl,
+                                    zero_emittance=zero_emittance, fileName=None, fileAppend=False,
                                     hSlitPoints=h5_parameters["HSLITPOINTS"],
                                     vSlitPoints=h5_parameters["VSLITPOINTS"],
-                                    harmonic_max=102)
+                                    harmonic_max=10,
+                                    return_flux=1)
 
-        # read_urgent("urgent.out")
-        # example plot
-        if 1:
+        X2, Y2, POWER_DENSITY2, POWER_DENSITY_HARMONICS2, ENERGY_HARMONICS2, FLUX2 = calc2d_from_harmonics_urgentpy(bl,
+                                    zero_emittance=zero_emittance, fileName=None, fileAppend=False,
+                                    hSlitPoints=h5_parameters["HSLITPOINTS"],
+                                    vSlitPoints=h5_parameters["VSLITPOINTS"],
+                                    harmonic_max=10,
+                                    return_flux=1)
+
+
+        dx = X[1] - X[0]
+        dy = Y[1] - Y[0]
+        print("\nharm, power, power-from-flux, power-density-peak, flux: ")
+        for i in range(POWER_DENSITY_HARMONICS.shape[0]):
+            print("%d  %10.3f  %10.3f  %10.3f  %g" % (i,
+                  POWER_DENSITY_HARMONICS[i].sum() * dx * dy,
+                  (FLUX * ENERGY_HARMONICS * codata.e)[i].sum() * dx * dy, # inefficient, but correct
+                  POWER_DENSITY_HARMONICS[i].max() * dx * dy,
+                  FLUX[i].sum() * dx * dy,)
+                  )
+
+        if True:
             from srxraylib.plot.gol import plot_image, plot_show
 
             print(POWER_DENSITY.max(), POWER_DENSITY.shape, X.shape, Y.shape)
-            plot_image(POWER_DENSITY, X, Y, xtitle="H [mm]", ytitle="V [mm]", title="Power density W/mm2 **FROM HARMONICS**", show=0)
+            plot_image(POWER_DENSITY, X, Y, xtitle="H [mm]", ytitle="V [mm]", title="Power density W/mm2 **FORTRAN FROM HARMONICS**", show=0)
 
             print(POWER_DENSITY1.max(), POWER_DENSITY1.shape, X1.shape, Y1.shape)
             plot_image(POWER_DENSITY1, X1, Y1, xtitle="H [mm]", ytitle="V [mm]", title="Power density W/mm2", show=0)
+
+            print(POWER_DENSITY2.max(), POWER_DENSITY2.shape, X2.shape, Y2.shape)
+            plot_image(POWER_DENSITY2, X2, Y2, xtitle="H [mm]", ytitle="V [mm]", title="Power density W/mm2 **PYTHON FROM HARMONICS**", show=0)
 
             plot_show()
 
