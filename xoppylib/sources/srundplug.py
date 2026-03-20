@@ -3297,7 +3297,7 @@ if __name__ == '__main__':
     if False:
         check_step_by_step()
 
-    if 1: # check power density from harmonics
+    if False: # check power density from harmonics
 
         zero_emittance = False
 

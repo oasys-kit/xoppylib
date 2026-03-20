@@ -158,12 +158,10 @@ def power_density_all_harmonics(Ky, N_periods, period_m, gamma, current_A,
     if not zero_emittance:
         dtheta_x = abs(theta_x_rad[1, 0] - theta_x_rad[0, 0])
         dtheta_y = abs(theta_y_rad[0, 1] - theta_y_rad[0, 0])
-        print(">>>>> sigmas: ", sigma_xp, sigma_yp, )
         sig_u = sigma_xp # np.sqrt((sigma_x / distance_m)**2 + sigma_xp**2)
         sig_v = sigma_yp # np.sqrt((sigma_y / distance_m)**2 + sigma_yp**2)
         sx_pix = sig_u / dtheta_x
         sy_pix = sig_v / dtheta_y
-        print(">>>>> sigmas: ", sigma_xp, sigma_yp, sig_u, sig_vgit add , sx_pix, sy_pix )
 
     for n in range(1, n_harmonics + 1):
         pd_n = power_density_harmonic(n, Ky, N_periods, period_m,
