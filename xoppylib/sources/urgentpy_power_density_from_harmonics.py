@@ -1,6 +1,6 @@
 """
 
-Calculation of the power density for the individual harmonics. 
+Calculation of the power density for the individual harmonics.
 
 Exact implementation like in the URGENT code: Walker & Diviacco, Rev. Sci. Instrum. 63, 392 (1992)
 
@@ -153,23 +153,67 @@ def power_density_all_harmonics(Ky, N_periods, period_m, gamma, current_A,
 
     indiv = np.zeros((n_harmonics, theta_x_rad.shape[0], theta_x_rad.shape[1]), dtype=float)
 
-
-    # use_emittance = any(v > 0 for v in (sigma_x, sigma_y, sigma_xp, sigma_yp))
     if not zero_emittance:
+        # Step sizes: axis-0 = X, axis-1 = Y  (np.outer convention)
         dtheta_x = abs(theta_x_rad[1, 0] - theta_x_rad[0, 0])
         dtheta_y = abs(theta_y_rad[0, 1] - theta_y_rad[0, 0])
-        sig_u = sigma_xp # np.sqrt((sigma_x / distance_m)**2 + sigma_xp**2)
-        sig_v = sigma_yp # np.sqrt((sigma_y / distance_m)**2 + sigma_yp**2)
+        sig_u = np.sqrt((sigma_x / distance_m) ** 2 + sigma_xp ** 2)
+        sig_v = np.sqrt((sigma_y / distance_m) ** 2 + sigma_yp ** 2)
         sx_pix = sig_u / dtheta_x
         sy_pix = sig_v / dtheta_y
 
-    for n in range(1, n_harmonics + 1):
-        pd_n = power_density_harmonic(n, Ky, N_periods, period_m,
-                                       gamma, current_A,
-                                       theta_x_rad, theta_y_rad, p_max)
+        # Extend the grid by NSIG=4 sigma on each side before convolving.
+        #
+        # Two reasons this is necessary:
+        #
+        # 1. Boundary condition: gaussian_filter default mode='reflect' mirrors
+        #    data at the edges, adding spurious flux. mode='constant' (zeros) is
+        #    physically correct but still biased if the Gaussian hasn't decayed
+        #    before reaching the boundary.  Padding by 4 sigma ensures the filter
+        #    tail is negligible at the extended boundary.
+        #
+        # 2. Correct sampling of narrow features: the Fortran URGENT source grid
+        #    uses DXE = SIGU (one step per sigma), which is far too coarse when
+        #    SIGU > lobe_angle of the harmonic (e.g. H4 lobe at ~19 μrad with
+        #    SIGU = 45 μrad). On the coarse grid the lobe falls between points,
+        #    BRI1 peaks at the wrong angle, and the output shows spurious off-axis
+        #    peaks.  The Gaussian-blur approach here is physically correct: the
+        #    fine observation grid resolves all lobes, and the convolution spreads
+        #    them by exactly sigma_u, sigma_v — regardless of lobe size.
+        NSIG  = 4
+        pad_x = int(np.ceil(NSIG * sx_pix))
+        pad_y = int(np.ceil(NSIG * sy_pix))
 
+        # Build extended 1-D angle axes, then 2-D grids via np.outer
+        x0 = theta_x_rad[:, 0]       # 1-D X values  (axis-0)
+        y0 = theta_y_rad[0, :]       # 1-D Y values  (axis-1)
+        x_ext = np.concatenate([
+            x0[0]  + dtheta_x * np.arange(-pad_x, 0),
+            x0,
+            x0[-1] + dtheta_x * np.arange(1, pad_x + 1),
+        ])
+        y_ext = np.concatenate([
+            y0[0]  + dtheta_y * np.arange(-pad_y, 0),
+            y0,
+            y0[-1] + dtheta_y * np.arange(1, pad_y + 1),
+        ])
+        TX_ext = np.outer(x_ext, np.ones_like(y_ext))
+        TY_ext = np.outer(np.ones_like(x_ext), y_ext)
+
+    for n in range(1, n_harmonics + 1):
         if not zero_emittance:
-            pd_n = gaussian_filter(pd_n, sigma=[sx_pix, sy_pix])
+            # Evaluate single-electron PD on the padded grid
+            pd_ext = power_density_harmonic(n, Ky, N_periods, period_m,
+                                             gamma, current_A,
+                                             TX_ext, TY_ext, p_max)
+            # Convolve with zero BC, then crop back to observation grid
+            pd_conv = gaussian_filter(pd_ext, sigma=[sx_pix, sy_pix], mode='constant')
+            pd_n = pd_conv[pad_x: pad_x + theta_x_rad.shape[0],
+                           pad_y: pad_y + theta_x_rad.shape[1]]
+        else:
+            pd_n = power_density_harmonic(n, Ky, N_periods, period_m,
+                                           gamma, current_A,
+                                           theta_x_rad, theta_y_rad, p_max)
 
         indiv[n-1] = pd_n
 
@@ -259,8 +303,8 @@ if __name__ == "__main__":
         ELECTRONCURRENT         = 0.2,
         ELECTRONBEAMSIZEH       = 3.34281e-05,
         ELECTRONBEAMSIZEV       = 7.28139e-06,
-        ELECTRONBEAMDIVERGENCEH = 10 * 4.51097e-06,
-        ELECTRONBEAMDIVERGENCEV = 10 * 1.94034e-06,
+        ELECTRONBEAMDIVERGENCEH = 4.51097e-06,
+        ELECTRONBEAMDIVERGENCEV = 1.94034e-06,
         PERIODID    = 0.018,
         NPERIODS    = 111,
         KV          = 1.358,
@@ -303,7 +347,7 @@ if __name__ == "__main__":
         YY = np.outer(np.ones_like(x_m), y_m)
         theta_x = XX / Z_m
         theta_y = YY / Z_m
-        dOmega  = (theta_x[0,1]-theta_x[0,0]) * (theta_y[1,0]-theta_y[0,0])
+        dOmega = (theta_x[1,0]-theta_x[0,0]) * (theta_y[0,1]-theta_y[0,0])
 
         t0 = time.time()
         indiv_Wrad2 = power_density_all_harmonics(
