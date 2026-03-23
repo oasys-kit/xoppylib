@@ -259,8 +259,8 @@ if __name__ == "__main__":
         ELECTRONCURRENT         = 0.2,
         ELECTRONBEAMSIZEH       = 3.34281e-05,
         ELECTRONBEAMSIZEV       = 7.28139e-06,
-        ELECTRONBEAMDIVERGENCEH = 4.51097e-06,
-        ELECTRONBEAMDIVERGENCEV = 1.94034e-06,
+        ELECTRONBEAMDIVERGENCEH = 10 * 4.51097e-06,
+        ELECTRONBEAMDIVERGENCEV = 10 * 1.94034e-06,
         PERIODID    = 0.018,
         NPERIODS    = 111,
         KV          = 1.358,
@@ -272,7 +272,7 @@ if __name__ == "__main__":
         HSLITPOINTS = 48,
         VSLITPOINTS = 30,
         METHOD      = 1,
-        USEEMITTANCES = 1,
+        USEEMITTANCES = not zero_emittance,
     )
 
     period_m  = h5_parameters["PERIODID"]
@@ -298,13 +298,15 @@ if __name__ == "__main__":
                            2 * h5_parameters["HSLITPOINTS"])
         y_m = np.linspace(-h5_parameters["GAPV"]/2, h5_parameters["GAPV"]/2,
                            2 * h5_parameters["VSLITPOINTS"])
-        XX, YY  = np.meshgrid(x_m, y_m)
+        # XX, YY  = np.meshgrid(x_m, y_m)
+        XX = np.outer(x_m, np.ones_like(y_m))
+        YY = np.outer(np.ones_like(x_m), y_m)
         theta_x = XX / Z_m
         theta_y = YY / Z_m
         dOmega  = (theta_x[0,1]-theta_x[0,0]) * (theta_y[1,0]-theta_y[0,0])
 
         t0 = time.time()
-        total_Wrad2, indiv_Wrad2 = power_density_all_harmonics(
+        indiv_Wrad2 = power_density_all_harmonics(
             Ky, N_periods, period_m, gamma, current_A,
             theta_x, theta_y,
             n_harmonics=n_harmonics,
@@ -349,8 +351,8 @@ if __name__ == "__main__":
         fig1.suptitle(f"PYTHON — Power density [W/rad²]  (zero-emittance)\n"
                       f"K={Ky:.3f}, N={N_periods}, E={E_GeV:.1f} GeV, I={current_A*1e3:.0f} mA")
         make_panel(fig1, ax1,
-                   [('Total H1-%d'%n_harmonics, total_Wrad2 * factor_Wrad2_to_Wmm2)] +
-                   [(f'H{n}', indiv_Wrad2[n] * factor_Wrad2_to_Wmm2) for n in range(7)],
+                   [('Total H1-%d'%n_harmonics, indiv_Wrad2.sum(axis=0).T * factor_Wrad2_to_Wmm2)] +
+                   [(f'H{n+1}', indiv_Wrad2[n].T * factor_Wrad2_to_Wmm2) for n in range(7)],
                    extent_py, 'W/rad²')
 
     # 2. Python — Spectral flux [ph/s/0.1%bw/mrad²]
@@ -370,8 +372,8 @@ if __name__ == "__main__":
         fig2.suptitle(f"PYTHON — Spectral flux [ph/s/0.1%bw/mm²]\n"
                       f"K={Ky:.3f}, N={N_periods}, E={E_GeV:.1f} GeV, I={current_A*1e3:.0f} mA")
         make_panel(fig2, ax2,
-                   [('Total H1-%d'%n_harmonics, total_flux_mm2)] +
-                   [(f'H{n}', indiv_flux_mm2[n]) for n in range(7)],
+                   [('Total H1-%d'%n_harmonics, total_flux_mm2.T)] +
+                   [(f'H{n+1}', indiv_flux_mm2[n].T) for n in range(7)],
                    extent_py, 'ph/s/0.1%bw/mrad²')
 
     # 3. Fortran — Power density [W/mm²]
