@@ -2,7 +2,7 @@
 ==================================   BM   ======================================
 
 
-BM calculate the spectum of Bending Magnets as a function of the photon energy.
+BM calculates the spectrum of Bending Magnets as a function of the photon energy.
 It also calculates the angular distribution of the emission.
 
 
@@ -18,7 +18,7 @@ References:
                Description of the input parameters for BM:
                ===========================================
 
-TYPE OF CALCULATION: Select between spctrum or angle distribuion options.
+TYPE OF CALCULATION: Select between spectrum or angle distribution options.
 
 B FROM:For selecting B field from either Magnetic radius of the bending
 	magnet or magnetic field.
@@ -31,7 +31,7 @@ MAGNETIC FIELD: The magnetic field of the bending magnet in Tesla.
 
 BEAM ENERGY:    The electron beam energy in GeV.
 
-BEAM CURRENT:   The electron beam current in Ampers.
+BEAM CURRENT:   The electron beam current in Amperes.
 
 HORIZ DIV:      The horizontal divergence in mrad.
 
@@ -42,7 +42,7 @@ PSI (VERTICAL DIV) FOR ENERGY SPECTRA: For the calculation of the FLux and
 	At Psi=0: Spectra (pre mrad in Psi) at the center of the beam Psi=0
 	In [Psi_Min,Psi_max]: Spectra integrated over a given interval in Psi.
 		The values of the interval (Psi_Min and Psi_max) must be
-		entered and also the mumber of points for integration in Psi.
+		entered and also the number of points for integration in Psi.
 	At Psi=Psi_Min: Single angle for spectrum calculations
 
 MIN PHOTON ENERGY:  Minimum photon energy for the calculated spectrum, in eV.
@@ -70,7 +70,7 @@ Psi min [mrad]: minimum value of Psi [mrad] for integration. Used in
 NUMBER OF PSI POINTS: Number of points for Psi integration or for the
 	(angular,energy) mesh distribution. Please note that in the case that
 	an integration over an angular interval [Psi_Min,Psi_Max] is chosen,
-	the accuracy of the result may depends on this number of points in
+	the accuracy of the result may depend on this number of points in
 	the integration grid.
 
-DUMP FILE: Optionaly writes results in an output file: bm.spec
+DUMP FILE: Optionally writes results in an output file: bm.spec

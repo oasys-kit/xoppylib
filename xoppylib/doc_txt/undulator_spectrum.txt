@@ -2,7 +2,7 @@
 ==================================   Undulator Spectrum  ===============================
 
 
- Undulator Spectrum calculates the spectum (flux or spectral power) of an undulator  as
+ Undulator Spectrum calculates the spectrum (flux or spectral power) of an undulator as
  a function of the photon energy.
 
  It can use several codes: US, URGENT and SRW.
@@ -13,7 +13,7 @@
                ===========================================================
 
 "Electron Energy [GeV]"
-"Electron Energy Spread": DeltaE/E for the electroon beam
+"Electron Energy Spread": DeltaE/E for the electron beam
 "Electron Current [A]"
 "Electron Beam Size H [m]"
 "Electron Beam Size V [m]"

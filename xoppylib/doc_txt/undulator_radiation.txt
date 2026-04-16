@@ -12,11 +12,11 @@ return ["Electron Energy [GeV]", "Electron Energy Spread", "Electron Current [A]
 "Slit gap H [m]", "Slit gap V [m]", "Number of slit mesh points in H", "Number of slit mesh points in V", "calculation code"]
 
 
-               Description of the input parameters for Undulator Power Density:
+               Description of the input parameters for Undulator Radiation:
                ================================================================
 
 "Electron Energy [GeV]"
-"Electron Energy Spread": DeltaE/E for the electroon beam
+"Electron Energy Spread": DeltaE/E for the electron beam
 "Electron Current [A]"
 "Electron Beam Size H [m]"
 "Electron Beam Size V [m]"
