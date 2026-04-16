@@ -36,10 +36,25 @@ def get_fwhm(histogram, bins, ret0=None):
 # --------------------------------------------------------------------------------------------
 
 
-def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.0,BFIELD_T=0.8,\
-                  BEAM_ENERGY_GEV=6.04,CURRENT_A=0.1,HOR_DIV_MRAD=1.0,VER_DIV=0,\
-                  PHOT_ENERGY_MIN=100.0,PHOT_ENERGY_MAX=100000.0,NPOINTS=500,LOG_CHOICE=1,\
-                  PSI_MRAD_PLOT=1.0,PSI_MIN=-1.0,PSI_MAX=1.0,PSI_NPOINTS=500,TYPE_CALC=0,FILE_DUMP=0):
+def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",
+                  RB_CHOICE=0,
+                  MACHINE_R_M=25.0,
+                  BFIELD_T=0.8,
+                  BEAM_ENERGY_GEV=6.04,
+                  CURRENT_A=0.1,
+                  HOR_DIV_MRAD=1.0,
+                  VER_DIV=0,
+                  PHOT_ENERGY_MIN=100.0,
+                  PHOT_ENERGY_MAX=100000.0,
+                  NPOINTS=500,
+                  LOG_CHOICE=1,
+                  PSI_MRAD_PLOT=1.0,
+                  PSI_MIN=-1.0,
+                  PSI_MAX=1.0,
+                  PSI_NPOINTS=500,
+                  TYPE_CALC=0,
+                  FILE_DUMP=0,
+                  ):
 
     # electron energy in GeV
     codata_mee = 1e-6 * codata.m_e * codata.c**2 / codata.e  # electron mass in meV
@@ -208,13 +223,24 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",RB_CHOICE=0,MACHINE_R_M=25.
 # --------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------
 
-def xoppy_calc_wigg(FIELD=0,NPERIODS=12,ULAMBDA=0.125,K=14.0,ENERGY=6.04,PHOT_ENERGY_MIN=100.0,\
-                        PHOT_ENERGY_MAX=100100.0,NPOINTS=100,NTRAJPOINTS=101,CURRENT=200.0,FILE="?"):
+def xoppy_calc_wigg(FIELD=0,
+                    NPERIODS=12,
+                    ULAMBDA=0.125,
+                    K=14.0,
+                    ENERGY=6.04,
+                    PHOT_ENERGY_MIN=100.0,
+                    PHOT_ENERGY_MAX=100100.0,
+                    NPOINTS=100,
+                    NTRAJPOINTS=101,
+                    CURRENT=200.0,
+                    FILE="?",
+                    outFileTraj="xwiggler_traj.spec",
+                    outFile="xwiggler.spec",
+                    ):
 
     print("Inside xoppy_calc_wigg. ")
 
-    outFileTraj = "xwiggler_traj.spec"
-    outFile = "xwiggler.spec"
+
 
     if FIELD == 0:
         t0,p = srfunc.wiggler_trajectory(b_from=0, nPer=NPERIODS, nTrajPoints=NTRAJPOINTS, \
@@ -271,12 +297,12 @@ def xoppy_calc_wiggler_on_aperture(FIELD=0,
                                    SHIFT_BETAX_VALUE=0.0,
                                    TRAJ_RESAMPLING_FACTOR=1e4,
                                    SLIT_POINTS_FACTOR=1,
+                                   outFileTraj="xwiggler_traj.spec",
+                                   outFile="xwiggler.spec",
                                    ):
 
     print("Inside xoppy_calc_wiggler_on_aperture. ")
 
-    outFileTraj = "xwiggler_traj.spec"
-    outFile = "xwiggler.spec"
 
     if FIELD == 0:
         t0,p = srfunc.wiggler_trajectory(b_from=0, nPer=NPERIODS, nTrajPoints=NTRAJPOINTS, \
@@ -520,16 +546,6 @@ def xoppy_calc_wiggler_radiation(
         if do_plot:
             from srxraylib.plot.gol import plot_image, plot_surface, plot_show
             plot_image(INTENSITY, divXX, divZZ, aspect='auto', title="E=%6.2f" % Ephoton, show=1)
-            # to create oasys icon...
-            # plot_surface(INTENSITY, divXX, divZZ, title="", show=0)
-            # import matplotlib.pylab as plt
-            # plt.xticks([])
-            # plt.yticks([])
-            # plt.axis('off')
-            # plt.tick_params(axis='both', left='off', top='off', right='off', bottom='off', labelleft='off',
-            #                 labeltop='off', labelright='off', labelbottom='off')
-            #
-            # plot_show()
     #
 
     h = divXX * DISTANCE * 1e3 # in mm for the h5 file
@@ -562,8 +578,6 @@ def xoppy_calc_wiggler_radiation(
         fit_ok = True
     except:
         pass
-
-
 
     # output file
     if h5_file != "":
@@ -675,14 +689,10 @@ def trapezoidal_rule_2d_1darrays(data2D,h=None,v=None):
 
 if __name__ == "__main__":
 
-    from srxraylib.plot.gol import plot, plot_image, plot_scatter, plot_show, set_qt
-    set_qt()
-
+    from srxraylib.plot.gol import plot, plot_image, plot_scatter, plot_show
 
     if True:
-
         # script to make the calculations (created by XOPPY:wiggler)
-
         from xoppylib.sources.xoppy_bm_wiggler import xoppy_calc_wigg
 
         energy, flux, spectral_power, cumulated_power, traj, traj_info = xoppy_calc_wigg(
@@ -696,7 +706,9 @@ if __name__ == "__main__":
             NPOINTS=100,
             NTRAJPOINTS=101,
             CURRENT=200.0,
-            FILE="?")
+            FILE="?",
+            outFile="",
+            outFileTraj="")
 
         #
         # script to make the calculations (created by XOPPY:WS)
@@ -739,7 +751,7 @@ if __name__ == "__main__":
              energy2, flux2,
              xtitle="Photon energy [eV]", ytitle="Flux [photons/s/0.1%bw]", title="WS Flux",
              legend=['WIGGLER', 'WS'],
-             xlog=0, ylog=0, show=True)
+             xlog=0, ylog=0, grid=1, show=True)
 
 
     ##########################################################################
@@ -751,7 +763,6 @@ if __name__ == "__main__":
     #
 
     if True:
-
         from xoppylib.sources.xoppy_bm_wiggler import xoppy_calc_wiggler_on_aperture
 
         energy, flux, spectral_power, cumulated_power, traj, traj_info = xoppy_calc_wiggler_on_aperture(
@@ -773,7 +784,9 @@ if __name__ == "__main__":
             SLIT_CENTER_H_MM=0.0,
             SLIT_HEIGHT_V_MM=60  * 0.3,
             SLIT_CENTER_V_MM=0.0,
-        )
+            outFile="",
+            outFileTraj="",
+            )
 
         #
         # script to make the calculations (created by XOPPY:WS)
@@ -798,7 +811,7 @@ if __name__ == "__main__":
             YPS=60.0  * 0.3,
             NXP=70,
             NYP=70,
-        )
+            )
 
         # data to pass to power
         data = numpy.loadtxt(out_file)
@@ -816,4 +829,4 @@ if __name__ == "__main__":
              energy2, flux2,
              xtitle="Photon energy [eV]", ytitle="Flux [photons/s/0.1%bw]", title="WS Flux",
              legend=['WIGGLER', 'WS'],
-             xlog=0, ylog=0, show=True)
+             xlog=0, ylog=0, grid=1, show=True)
