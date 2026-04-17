@@ -1970,7 +1970,7 @@ def calc2d_from_harmonics_urgentpy(bl,
     def harmonic_energy(n, K, period_m, gamma, thetaX, thetaY):
         """Resonant photon energy [eV] for harmonic n on-axis."""
         hc_eVm = codata.h * codata.c / codata.e  # 1239.84193e-9
-        return n * 2.0 * gamma ** 2 * hc_eVm / (period_m * (1.0 + K ** 2 / 2.0 + gamma ** 2 * thetaX * thetaY))
+        return n * 2.0 * gamma ** 2 * hc_eVm / (period_m * (1.0 + K ** 2 / 2.0 + gamma ** 2 * (thetaX**2 + thetaY**2)))
 
     # 1. Python — Power density [W/mm²]
 
@@ -4071,7 +4071,7 @@ if __name__ == '__main__':
     if False:
         main(radiance=True, flux=False, flux_from_3d=False, power_density=False)
 
-    if Fals1e:
+    if False:
         check_step_by_step()
 
     if False:  # check power density from harmonics

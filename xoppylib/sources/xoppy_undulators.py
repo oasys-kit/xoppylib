@@ -310,6 +310,7 @@ def xoppy_calc_undulator_power_density_from_harmonics(
                                        h5_initialize=True,
                                        h5_parameters={},
                                        harmonic_max=20,
+                                       photon_energy_bin=100.0, # in eV, the bin for the Spectral Power calculation
                                        ):
     print("Inside xoppy_calc_undulator_power_density_from_harmonics. ")
 
@@ -453,11 +454,30 @@ def xoppy_calc_undulator_power_density_from_harmonics(
                 h5w.add_image(data_fitted.reshape(h.size,v.size),h,v,image_name="PowerDensityFit",entry_name=h5_entry_name,title_x="X [mm]",title_y="Y [mm]")
                 h5w.add_key("fit_info",info_params(fit_parameters), entry_name=h5_entry_name+"/PowerDensityFit")
 
+            n = numpy.arange(power_density_harmonics.shape[0])
+            h5w.add_stack(n, h, v, power_density_harmonics,
+                          stack_name="HarmonicsPowerDensity", entry_name=h5_entry_name,
+                          title_0="Harmonic index", title_1="X gap [mm]", title_2="Y gap [mm]")
+            #
+            h5w.add_stack(n, h, v, energy_harmonics,
+                          stack_name="HarmonicsPhotonEnergy", entry_name=h5_entry_name,
+                          title_0="Harmonic index", title_1="X gap [mm]", title_2="Y gap [mm]")
+
+
             print("File written to disk: %s"%h5_file)
         except:
             print("ERROR initializing h5 file")
 
-    return h, v, p, code, power_density_harmonics, energy_harmonics
+    # Spectral Power
+    energies = energy_harmonics.flatten()  # Flatten all energy values
+    powers = power_density_harmonics.flatten() * (h[1] - h[0]) * (v[1] - v[0])  # Flatten corresponding power contributions
+    e_bins = numpy.arange(energy_harmonics.min(), energy_harmonics.max() + photon_energy_bin, photon_energy_bin)
+    # Bin the powers into energy bins
+    power_vs_energy, bin_edges = numpy.histogram(energies, bins=e_bins, weights=powers)
+    spectral_power_energy = 0.5 * (bin_edges[:-1] + bin_edges[1:]) # bin centers
+    spectral_power = power_vs_energy / photon_energy_bin
+
+    return h, v, p, code, power_density_harmonics, energy_harmonics, spectral_power, spectral_power_energy
 
 def xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001,ELECTRONCURRENT=0.2,\
                                        ELECTRONBEAMSIZEH=0.000395,ELECTRONBEAMSIZEV=9.9e-06,\
@@ -643,7 +663,7 @@ def xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.00
 
 if __name__ == "__main__":
 
-    from srxraylib.plot.gol import plot,plot_image
+    from srxraylib.plot.gol import plot, plot_image
 
     if False:
         e, f, spectral_power, cumulated_power = xoppy_calc_undulator_spectrum()
@@ -655,37 +675,75 @@ if __name__ == "__main__":
         e, h, v, p, code = xoppy_calc_undulator_radiation(ELECTRONENERGY=6.0, h5_file="test.h5",h5_entry_name="first_entry",h5_initialize=True)
         e, h, v, p, code = xoppy_calc_undulator_radiation(ELECTRONENERGY=7.0, h5_file="test.h5",h5_entry_name="second_entry",h5_initialize=False)
 
-    # h, v, p, code = xoppy_calc_undulator_power_density(h5_file="test.h5",h5_initialize=True)
-    # plot_image(p,h,v)
+    if False:
 
-    h, v, p, code = xoppy_calc_undulator_power_density_from_harmonics(
-        METHOD=1,  # 0=fortran, 1=python
-        harmonic_max=15,
-        ELECTRONENERGY=6.0,
-        ELECTRONENERGYSPREAD=0.001,
-        ELECTRONCURRENT=0.2,
-        ELECTRONBEAMSIZEH=0.000395,
-        ELECTRONBEAMSIZEV=9.9e-06,
-        ELECTRONBEAMDIVERGENCEH=1.05e-05,
-        ELECTRONBEAMDIVERGENCEV=3.9e-06,
-        PERIODID=0.018,
-        NPERIODS=111,
-        KV=1.358,
-        KH=0.0,
-        KPHASE=0.0,
-        DISTANCE=30.0,
-        GAPH=0.001,
-        GAPV=0.001,
-        HSLITPOINTS=47 + 1, # 101,
-        VSLITPOINTS=29 + 1, # 51,
-        USEEMITTANCES=0,
-        MASK_FLAG=0,
-        MASK_ROT_H_DEG=0.0,
-        MASK_ROT_V_DEG=0.0,
-        MASK_H_MIN=None,
-        MASK_H_MAX=None,
-        MASK_V_MIN=None,
-        MASK_V_MAX=None,
-        h5_file="test.h5",
-        h5_initialize=True)
-    plot_image(p,h,v)
+        h5_parameters = dict()
+        h5_parameters["ELECTRONENERGY"] = 6.0
+        h5_parameters["ELECTRONENERGYSPREAD"] = 0.001
+        h5_parameters["ELECTRONCURRENT"] = 0.2
+        h5_parameters["ELECTRONBEAMSIZEH"] = 3.01836e-05
+        h5_parameters["ELECTRONBEAMSIZEV"] = 3.63641e-06
+        h5_parameters["ELECTRONBEAMDIVERGENCEH"] = 4.36821e-06
+        h5_parameters["ELECTRONBEAMDIVERGENCEV"] = 1.37498e-06
+        h5_parameters["PERIODID"] = 0.018
+        h5_parameters["NPERIODS"] = 111
+        h5_parameters["KV"] = 1.6563
+        h5_parameters["KH"] = 0.0
+        h5_parameters["KPHASE"] = 0.0
+        h5_parameters["DISTANCE"] = 30.0
+        h5_parameters["GAPH"] = 0.01
+        h5_parameters["GAPV"] = 0.01
+        h5_parameters["HSLITPOINTS"] = 41
+        h5_parameters["VSLITPOINTS"] = 41
+        h5_parameters["METHOD"] = 1  # 0=urgent (fortran), 1=urgentpy (python)
+        h5_parameters["USEEMITTANCES"] = 1
+        h5_parameters["MASK_FLAG"] = 0
+        h5_parameters["MASK_ROT_H_DEG"] = 0.0
+        h5_parameters["MASK_ROT_V_DEG"] = 0.0
+        h5_parameters["MASK_H_MIN"] = -1000.0
+        h5_parameters["MASK_H_MAX"] = 1000.0
+        h5_parameters["MASK_V_MIN"] = -1000.0
+        h5_parameters["MASK_V_MAX"] = 1000.0
+        h5_parameters["harmonic_max"] = 20  # maximum harmonic to calculate
+
+
+        h, v, p, code, p_harmonics, e_harmonics, spectral_power, spectral_power_energy = xoppy_calc_undulator_power_density_from_harmonics(
+            ELECTRONENERGY=h5_parameters["ELECTRONENERGY"],
+            ELECTRONENERGYSPREAD=h5_parameters["ELECTRONENERGYSPREAD"],
+            ELECTRONCURRENT=h5_parameters["ELECTRONCURRENT"],
+            ELECTRONBEAMSIZEH=h5_parameters["ELECTRONBEAMSIZEH"],
+            ELECTRONBEAMSIZEV=h5_parameters["ELECTRONBEAMSIZEV"],
+            ELECTRONBEAMDIVERGENCEH=h5_parameters["ELECTRONBEAMDIVERGENCEH"],
+            ELECTRONBEAMDIVERGENCEV=h5_parameters["ELECTRONBEAMDIVERGENCEV"],
+            PERIODID=h5_parameters["PERIODID"],
+            NPERIODS=h5_parameters["NPERIODS"],
+            KV=h5_parameters["KV"],
+            KH=h5_parameters["KH"],
+            KPHASE=h5_parameters["KPHASE"],
+            DISTANCE=h5_parameters["DISTANCE"],
+            GAPH=h5_parameters["GAPH"],
+            GAPV=h5_parameters["GAPV"],
+            HSLITPOINTS=h5_parameters["HSLITPOINTS"],
+            VSLITPOINTS=h5_parameters["VSLITPOINTS"],
+            METHOD=h5_parameters["METHOD"],
+            harmonic_max=h5_parameters["harmonic_max"],
+            USEEMITTANCES=h5_parameters["USEEMITTANCES"],
+            MASK_FLAG=h5_parameters["MASK_FLAG"],
+            MASK_ROT_H_DEG=h5_parameters["MASK_ROT_H_DEG"],
+            MASK_ROT_V_DEG=h5_parameters["MASK_ROT_V_DEG"],
+            MASK_H_MIN=h5_parameters["MASK_H_MIN"],
+            MASK_H_MAX=h5_parameters["MASK_H_MAX"],
+            MASK_V_MIN=h5_parameters["MASK_V_MIN"],
+            MASK_V_MAX=h5_parameters["MASK_V_MAX"],
+            h5_file="undulator_power_density_from_harmonics.h5",
+            h5_entry_name="XOPPY_POWERDENSITY",
+            h5_initialize=True,
+            h5_parameters=h5_parameters,
+            photon_energy_bin=400.0,
+        )
+
+        #
+        # plot power density vs h,v
+        #
+        plot_image(p,h,v)
+        plot(spectral_power_energy, spectral_power)
