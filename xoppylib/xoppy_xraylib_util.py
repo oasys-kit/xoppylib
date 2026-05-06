@@ -1,3 +1,6 @@
+"""
+XOPPY utility functions wrapping dabax/xraylib for material constants, densities, and scattering factors.
+"""
 from dabax.dabax_xraylib import DabaxXraylib
 try: import xraylib
 except: pass

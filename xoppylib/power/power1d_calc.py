@@ -1,3 +1,6 @@
+"""
+1D integrated power and flux calculations for optical elements.
+"""
 import numpy
 import scipy.constants as codata
 

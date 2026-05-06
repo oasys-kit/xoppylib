@@ -1,3 +1,6 @@
+"""
+I/O utilities for Bragg crystal preprocessor files (read/write version 1 and 2).
+"""
 
 import numpy
 

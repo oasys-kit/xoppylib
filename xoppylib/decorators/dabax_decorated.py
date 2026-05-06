@@ -1,3 +1,6 @@
+"""
+DabaxXraylib instance decorated with xoppy calculation functions.
+"""
 #
 # dabax decorated with xoppy functions
 #

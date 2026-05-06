@@ -1,3 +1,6 @@
+"""
+Utilities for running XOPPY external Fortran/C binaries (URGENT, US, SRW wrappers).
+"""
 import sys
 import os
 import platform

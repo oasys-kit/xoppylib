@@ -1,3 +1,6 @@
+"""
+XOPPY cross-section calculator for elements and compounds.
+"""
 import numpy
 
 from xoppylib.scattering_functions.cross_calc import cross_calc, cross_calc_mix, cross_calc_nist

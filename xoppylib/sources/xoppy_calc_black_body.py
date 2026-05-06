@@ -1,3 +1,6 @@
+"""
+XOPPY black body radiation spectrum calculator.
+"""
 
 import numpy
 import scipy.constants as codata

@@ -1,3 +1,6 @@
+"""
+XOPPY anomalous scattering factor f1/f2 calculator.
+"""
 import numpy
 from xoppylib.scattering_functions.f1f2_calc import f1f2_calc, f1f2_calc_mix, f1f2_calc_nist
 # from xoppylib.xoppy_xraylib_util import f1f2_calc, f1f2_calc_mix, f1f2_calc_nist

@@ -1,3 +1,6 @@
+"""
+Beam class for shadow-like sequential ray-optics calculations.
+"""
 import numpy
 import scipy.constants as codata
 from numpy.testing import assert_almost_equal

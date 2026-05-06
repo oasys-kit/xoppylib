@@ -1,3 +1,6 @@
+"""
+Crystal diffraction tools: Bragg metric tensor, structure factors, and related utilities.
+"""
 import numpy
 
 from dabax.dabax_xraylib import DabaxXraylib

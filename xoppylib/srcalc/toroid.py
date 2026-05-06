@@ -1,3 +1,6 @@
+"""
+Toroid optical surface for ray tracing.
+"""
 
 import numpy
 

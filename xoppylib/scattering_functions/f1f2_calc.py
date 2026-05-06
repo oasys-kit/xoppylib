@@ -1,3 +1,6 @@
+"""
+Anomalous scattering factor f1/f2 calculations and mirror reflectivity.
+"""
 import numpy
 import scipy.constants as codata
 

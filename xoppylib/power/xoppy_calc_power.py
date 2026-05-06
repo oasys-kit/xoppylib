@@ -1,3 +1,6 @@
+"""
+XOPPY integrated power and flux calculator for optical elements.
+"""
 import numpy
 from xoppylib.power.power1d_calc import power1d_calc
 

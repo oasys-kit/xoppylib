@@ -1,3 +1,6 @@
+"""
+1D power and flux calculations for Bragg, Laue and multilayer monochromators.
+"""
 import numpy
 import h5py
 

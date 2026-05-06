@@ -1,3 +1,6 @@
+"""
+Parsing utilities for URGENT binary output files.
+"""
 import numpy as np
 import re
 

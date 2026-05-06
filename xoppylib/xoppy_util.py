@@ -1,3 +1,6 @@
+"""
+General utility functions for XOPPY: file locations, plotting helpers, and data I/O.
+"""
 import sys, os, numpy, platform, importlib, six
 
 try:

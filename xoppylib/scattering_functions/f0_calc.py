@@ -1,3 +1,6 @@
+"""
+Atomic form factor f0 calculations (legacy module, use xoppy_calc_f0 instead).
+"""
 #
 # file to be removed: copied to xoppy_calc_f0 (for uniformity)
 #

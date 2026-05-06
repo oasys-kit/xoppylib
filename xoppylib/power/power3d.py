@@ -1,3 +1,6 @@
+"""
+3D power density calculations for synchrotron radiation sources.
+"""
 #
 # tools for power3d app
 #

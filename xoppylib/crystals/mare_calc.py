@@ -1,3 +1,6 @@
+"""
+MARE crystal diffraction calculations (structure factors, rocking curves).
+"""
 import numpy
 import scipy.constants as codata
 from xoppylib.crystals.tools import bragg_metrictensor, lorentz

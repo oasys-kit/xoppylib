@@ -1,3 +1,6 @@
+"""
+Conic optical surface for ray tracing (mirrors and lenses).
+"""
 
 import numpy
 

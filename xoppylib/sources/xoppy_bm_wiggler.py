@@ -1,3 +1,6 @@
+"""
+XOPPY bending magnet and wiggler radiation spectrum and power calculations.
+"""
 import numpy
 from srxraylib.sources import srfunc
 

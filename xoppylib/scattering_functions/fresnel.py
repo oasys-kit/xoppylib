@@ -1,3 +1,6 @@
+"""
+Fresnel reflectivity and interface reflectivity for X-ray mirrors.
+"""
 import numpy
 import scipy.constants as codata
 

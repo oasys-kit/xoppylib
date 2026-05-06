@@ -1,3 +1,6 @@
+"""
+Mixin decorating material constants libraries (dabax/xraylib) with xoppy calculation functions.
+"""
 #
 # material constants libraries (dabax and xraylib) decorated with xoppy functions
 #

@@ -1,3 +1,6 @@
+"""
+Create Bragg preprocessor files version 1 using dabax or xraylib.
+"""
 
 import numpy
 

@@ -1,3 +1,6 @@
+"""
+Absorption cross-section calculations for elements and compounds using dabax or xraylib.
+"""
 import numpy
 import scipy.constants as codata
 

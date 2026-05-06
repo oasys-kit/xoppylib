@@ -1,3 +1,6 @@
+"""
+XOPPY atomic form factor f0 calculator.
+"""
 import numpy
 from dabax.common_tools import calculate_f0_from_f0coeff, atomic_number, atomic_symbols
 

@@ -1,3 +1,6 @@
+"""
+XOPPY power calculator for monochromator beamlines.
+"""
 import numpy
 import scipy.constants as codata
 from xoppylib.power.power1d_calc_monochromators import \

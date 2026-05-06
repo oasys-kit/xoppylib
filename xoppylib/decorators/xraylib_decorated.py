@@ -1,3 +1,6 @@
+"""
+xraylib decorated with xoppy calculation functions.
+"""
 #
 # xraylib decorated with xoppy functions
 #
