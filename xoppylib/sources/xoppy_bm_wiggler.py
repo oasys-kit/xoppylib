@@ -332,6 +332,17 @@ def xoppy_calc_wiggler_on_aperture(FIELD=0,
         e, f0, p0 = srfunc.wiggler_spectrum(t0, enerMin=PHOT_ENERGY_MIN, enerMax=PHOT_ENERGY_MAX, nPoints=NPOINTS, \
                                         electronCurrent=CURRENT*1e-3, outFile=outFile, elliptical=False)
     else:
+        _n_traj = int(NTRAJPOINTS * TRAJ_RESAMPLING_FACTOR)
+        _estimated_gb = _n_traj * SLIT_NY * NPOINTS * 8 / 1e9
+        _limit_gb = 4.0
+        if _estimated_gb > _limit_gb:
+            raise ValueError(
+                f"wiggler_spectrum_on_aperture: estimated memory {_estimated_gb:.1f} GB "
+                f"exceeds limit of {_limit_gb:.1f} GB. "
+                f"(NTRAJPOINTS={NTRAJPOINTS} x TRAJ_RESAMPLING_FACTOR={TRAJ_RESAMPLING_FACTOR} "
+                f"x SLIT_NY={SLIT_NY} x NPOINTS={NPOINTS}). "
+                f"Reduce TRAJ_RESAMPLING_FACTOR or SLIT_NY."
+            )
         e, f0, p0 = srfunc.wiggler_spectrum_on_aperture(t0, enerMin=PHOT_ENERGY_MIN, enerMax=PHOT_ENERGY_MAX, nPoints=NPOINTS, \
                                             electronCurrent=CURRENT * 1e-3, outFile=outFile, elliptical=False,
                                             psi_min=(-SLIT_HEIGHT_V_MM / 2 + SLIT_CENTER_V_MM) / SLIT_D, # mrad
