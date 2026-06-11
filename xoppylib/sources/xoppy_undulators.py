@@ -10,8 +10,12 @@ import os
 from collections import OrderedDict
 
 from xoppylib.sources.srundplug import calc1d_us, calc1d_srw, calc1d_urgent, calc1d_pysru
+from xoppylib.sources.urgentpy_spectrum import calc1d_urgentpy
+
+from xoppylib.sources.calc2d_kim import calc2d_kim
 from xoppylib.sources.srundplug import calc2d_us, calc2d_srw, calc2d_urgent, calc2d_pysru
 from xoppylib.sources.srundplug import calc2d_from_harmonics_urgent, calc2d_from_harmonics_urgentpy
+
 from xoppylib.sources.srundplug import calc3d_us, calc3d_srw, calc3d_urgent, calc3d_pysru, calc3d_srw_step_by_step
 
 from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
@@ -19,6 +23,7 @@ from xoppylib.fit_gaussian2d import fit_gaussian2d, info_params, twoD_Gaussian
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 
 import scipy.constants as codata
+
 codata_mee = codata.physical_constants["electron mass energy equivalent in MeV"][0]
 
 # --------------------------------------------------------------------------------------------
@@ -97,6 +102,13 @@ def xoppy_calc_undulator_spectrum(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001
         e, f = calc1d_srw(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
               photonEnergyPoints=PHOTONENERGYPOINTS,fileName=outFile,fileAppend=False,zero_emittance=zero_emittance,
               srw_max_harmonic_number=h_max)
+        print("Done")
+    if METHOD == 3:
+        print("Undulator flux calculation using URGENTPY. Please wait...")
+        e, f = calc1d_urgentpy(bl,photonEnergyMin=PHOTONENERGYMIN,photonEnergyMax=PHOTONENERGYMAX,
+              photonEnergyPoints=PHOTONENERGYPOINTS,zero_emittance=zero_emittance,
+                               fileName=outFile,fileAppend=False,
+                               )
         print("Done")
 
     if zero_emittance:
@@ -181,16 +193,22 @@ def xoppy_calc_undulator_power_density(ELECTRONENERGY=6.04,
         h,v,p = calc2d_us(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
                                     zero_emittance=zero_emittance)
         print("Done")
-    if METHOD == 1:
+    elif METHOD == 1:
         code = "URGENT"
         print("Undulator power_density calculation using URGENT. Please wait...")
         h,v,p = calc2d_urgent(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
                                         zero_emittance=zero_emittance)
         print("Done")
-    if METHOD == 2:
+    elif METHOD == 2:
         code = "SRW"
         print("Undulator power_density calculation using SRW. Please wait...")
         h,v,p = calc2d_srw(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
+                                     zero_emittance=zero_emittance)
+        print("Done")
+    elif METHOD == 3:
+        code = "KIM"
+        print("Undulator power_density calculation using KIM (Kim's equations implemented in python). Please wait...")
+        h,v,p = calc2d_kim(bl,fileName=outFile,fileAppend=False,hSlitPoints=HSLITPOINTS,vSlitPoints=VSLITPOINTS,
                                      zero_emittance=zero_emittance)
         print("Done")
 
@@ -668,17 +686,41 @@ if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot, plot_image
 
-    if False:
-        e, f, spectral_power, cumulated_power = xoppy_calc_undulator_spectrum()
-        plot(e,f)
+    if 0: # spectrum
+        e0, f0, _, _ = xoppy_calc_undulator_spectrum(METHOD=0, PHOTONENERGYPOINTS=2500)  # us
+        e1, f1, _, _ = xoppy_calc_undulator_spectrum(METHOD=1, PHOTONENERGYPOINTS=2500)  # urgent
+        e2, f2, _, _ = xoppy_calc_undulator_spectrum(METHOD=2, PHOTONENERGYPOINTS=2500)  # srw
+        e3, f3, _, _ = xoppy_calc_undulator_spectrum(METHOD=3, PHOTONENERGYPOINTS=2500)  # urgentpy
+        plot(e0,f0,e1,f1,e2,f2,e3,f3, legend=["US","URGENT","SRW","URGENTPY"], grid=1)
 
-        h, v, p, code = xoppy_calc_undulator_power_density(h5_file="test.h5",h5_initialize=True)
-        plot_image(p,h,v)
+    if 1:  # power density
+        h0, v0, p0, code0  = xoppy_calc_undulator_power_density(METHOD=0, HSLITPOINTS=51, VSLITPOINTS=31,)  # us
+        h1, v1, p1, code1  = xoppy_calc_undulator_power_density(METHOD=1, HSLITPOINTS=51, VSLITPOINTS=31,)  # urgent
+        h2, v2, p2, code2  = xoppy_calc_undulator_power_density(METHOD=2, HSLITPOINTS=51, VSLITPOINTS=31,)  # srw
+        h3, v3, p3, code3  = xoppy_calc_undulator_power_density(METHOD=3, HSLITPOINTS=51, VSLITPOINTS=31,)  # urgentpy
 
+        legend = ["US", "URGENT", "SRW", "KIM"]
+        plot_image(p0, h0, v0, title="METHOD=0="+legend[0], show=0)
+        plot_image(p1, h1, v1, title="METHOD=1="+legend[1], show=0)
+        plot_image(p2, h2, v2, title="METHOD=2="+legend[2], show=0)
+        plot_image(p3, h3, v3, title="METHOD=3="+legend[3], show=0)
+
+        legend = ["H-US","H-URGENT","H-SRW","H-KIM","V-US","V-URGENT","V-SRW","V-KIM",]
+        plot(
+             h0, p0[:, h0.size//2],
+             h1, p1[:, h1.size//2],
+             h2, p2[:, h2.size//2],
+             h3, p3[:, h3.size//2],
+             v0, p0[v0.size//2, :],
+             v1, p1[v0.size//2, :],
+             v2, p2[v0.size//2, :],
+             v3, p3[v0.size//2, :], yrange=[0,1000], legend=legend)
+
+    if False:  # undulator radiation append in h5
         e, h, v, p, code = xoppy_calc_undulator_radiation(ELECTRONENERGY=6.0, h5_file="test.h5",h5_entry_name="first_entry",h5_initialize=True)
         e, h, v, p, code = xoppy_calc_undulator_radiation(ELECTRONENERGY=7.0, h5_file="test.h5",h5_entry_name="second_entry",h5_initialize=False)
 
-    if False:
+    if False: # xoppy_calc_undulator_power_density_from_harmonics
 
         h5_parameters = dict()
         h5_parameters["ELECTRONENERGY"] = 6.0

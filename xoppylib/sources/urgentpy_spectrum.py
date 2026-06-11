@@ -34,6 +34,7 @@ def calc1d_urgentpy(bl,
                   hSlitPoints=50,
                   vSlitPoints=50,
                   zero_emittance=False,
+                  fileName="", fileAppend=False,
                   verbose=True):
     """
     Undulator spectral flux [ph/s/0.1%bw] through a rectangular slit.
@@ -87,6 +88,48 @@ def calc1d_urgentpy(bl,
         ip = f.argmax()
         print(f"  Done in {time.time()-t0:.1f} s  "
               f"Peak={f[ip]:.4e} ph/s/0.1%bw  at E={eArray[ip]/1e3:.3f} keV")
+
+    # **********************Saving results
+    if fileName is not None:
+        if fileName != '':
+            fid = open(fileName, "w")
+            fid.write("#F " + fileName + "\n")
+            intensArray =  f
+            m2ev = codata.c * codata.h / codata.e  # lambda(m)  = m2eV / energy(eV)
+            if fileAppend:
+                fid = open(fileName, "a")
+            else:
+                scanCounter = 0
+                fid = open(fileName, "w")
+                fid.write("#F " + fileName + "\n")
+
+            fid.write("\n")
+            scanCounter += 1
+            fid.write("#S %d Undulator spectrum calculation using pySRU\n" % (scanCounter))
+
+            for i, j in bl.items():  # write bl values
+                fid.write("#UD %s = %s\n" % (i, j))
+            fid.write("#UD photonEnergyMin =  %f\n" % (photonEnergyMin))
+            fid.write("#UD photonEnergyMax =  %f\n" % (photonEnergyMax))
+            fid.write("#UD photonEnergyPoints =  %d\n" % (photonEnergyPoints))
+
+            #
+            # write flux to file
+            #
+            header = "#N 4 \n#L PhotonEnergy[eV]  PhotonWavelength[A]  Flux[phot/sec/0.1%bw]  Spectral Power[W/eV]\n"
+            fid.write(header)
+
+            for i in range(eArray.size):
+                fid.write(' ' + repr(eArray[i]) + '   ' + repr(m2ev / eArray[i] * 1e10) + '    ' +
+                        repr(intensArray[i]) + '    ' +
+                        repr(intensArray[i] * codata.e * 1e3) + '\n')
+            fid.close()
+
+            if fileAppend:
+                print("Data appended to file: %s" % (fileName))
+            else:
+                print("File written to disk: %s" % (fileName))
+
     return eArray, f
 
 
@@ -364,7 +407,7 @@ if __name__ == "__main__":
     Emin, Emax, Npts = 3000.0, 110000.0, 1500
 
     print("=" * 60)
-    print("  URGENT Python — Walker & Diviacco (1992)")
+    print("  URGENTPY — Walker & Diviacco (1992) — Python version")
     print("=" * 60)
 
     results = {}
