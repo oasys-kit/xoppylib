@@ -1830,7 +1830,7 @@ def calc2d_urgent(bl, zero_emittance=False, fileName=None, fileAppend=False, hSl
 
 def calc2d_from_harmonics_urgent(bl, zero_emittance=False, fileName=None, fileAppend=False,
                                  hSlitPoints=21, vSlitPoints=51, harmonic_max=200,
-                                 return_flux=0,  # 0=return power density (default), 1=return, in addition,FLUX array
+                                 return_flux=1,  # 0=return power density (default), 1=return, in addition,FLUX array
                                  ):
     r"""
         run Urgent for calculating power density storing the power density per individual harmonics
@@ -1909,7 +1909,7 @@ def calc2d_from_harmonics_urgent(bl, zero_emittance=False, fileName=None, fileAp
 
     harmonics, POWER_DENSITY, ENERGY, FLUX, X_grid, Y_grid = parse_urgent_2d_from_harmonics("urgent.out")
     if return_flux:
-        return X_grid[:, 0].copy(), Y_grid[0, :].copy(), POWER_DENSITY.sum(axis=0).copy(), POWER_DENSITY, ENERGY, FLUX
+        return X_grid[:, 0].copy(), Y_grid[0, :].copy(), POWER_DENSITY.sum(axis=0).copy(), POWER_DENSITY, ENERGY, Y_grid[0, :].copy() / (codata.e * 1e3)
     else:
         return X_grid[:, 0].copy(), Y_grid[0, :].copy(), POWER_DENSITY.sum(axis=0).copy(), POWER_DENSITY, ENERGY
 
@@ -1919,7 +1919,7 @@ def calc2d_from_harmonics_urgentpy(bl,
                                    fileName=None, fileAppend=False,
                                    hSlitPoints=21, vSlitPoints=51,
                                    harmonic_max=None,
-                                   return_flux=0,  # 0=return power density (default), 1=return, in addition,FLUX array
+                                   return_flux=1,  # 0=return power density (default), 1=return, in addition,FLUX array
                                    ):
     r"""
         run a pythonized code that mimics Urgent for calculating power density storing the power density per individual harmonics
@@ -1986,7 +1986,7 @@ def calc2d_from_harmonics_urgentpy(bl,
         indiv_flux_rad2 = indiv_Wrad2 / (ENERGY * codata.e)
         # Spectral flux [ph/s/0.1%bw/mm²]
         indiv_flux_mm2 = indiv_flux_rad2 / Z_m ** 2 * 1e-6
-        return x_m * 1e3, y_m * 1e3, POWER_DENSITY.sum(axis=0), POWER_DENSITY, ENERGY, indiv_flux_mm2
+        return x_m * 1e3, y_m * 1e3, POWER_DENSITY.sum(axis=0), POWER_DENSITY, ENERGY, POWER_DENSITY / (codata.e * 1e3)
     else:
         return x_m * 1e3, y_m * 1e3, POWER_DENSITY.sum(axis=0), POWER_DENSITY, ENERGY
 

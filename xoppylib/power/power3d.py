@@ -16,6 +16,7 @@ except: pass
 from xoppylib.scattering_functions.fresnel import reflectivity_fresnel
 from xoppylib.xoppy_xraylib_util import nist_compound_list, density
 from xoppylib.mlayer import MLayer
+from xoppylib.power.power1d_calc_monochromators import get_multilayer_instance
 
 from scipy.interpolate import interp2d, RectBivariateSpline
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
@@ -47,19 +48,42 @@ def integral_3d(data3D, e=None, h=None, v=None, method=0):
     if v is None:
         v = numpy.arange(data3D.shape[2])
 
-    if method == 0:
+    if len(e.shape) == 1: # e is 1D: usual case
+        if method == 0:
+            try:
+                totPower2 = numpy.trapezoid(data3D, v, axis=2)
+                totPower2 = numpy.trapezoid(totPower2, h, axis=1)
+                totPower2 = numpy.trapezoid(totPower2, e, axis=0)
+            except:
+                totPower2 = numpy.trapz(data3D, v, axis=2)
+                totPower2 = numpy.trapz(totPower2, h, axis=1)
+                totPower2 = numpy.trapz(totPower2, e, axis=0)
+        else:
+            totPower2 = data3D.sum() * (e[1] - e[0]) * (h[1] - h[0]) * (v[1] - v[0])
+    else: # e has the same dimension as data3D, calculation vs harmonics
+        if method == 0:
 
-        try:    totPower2 = numpy.trapezoid(data3D, v, axis=2)
-        except: totPower2 = numpy.trapz(data3D, v, axis=2)
-        try:    totPower2 = numpy.trapezoid(totPower2, h, axis=1)
-        except: totPower2 = numpy.trapz(totPower2, h, axis=1)
-        try:    totPower2 = numpy.trapezoid(totPower2, e, axis=0)
-        except: totPower2 = numpy.trapz(totPower2, e, axis=0)
-    else:
-        totPower2 = data3D.sum() * (e[1] - e[0]) * (h[1] - h[0]) * (v[1] - v[0])
+            totPower2 = numpy.trapezoid(data3D, v, axis=2)
+            totPower2 = numpy.trapezoid(totPower2, h, axis=1)
+            totPower2 = numpy.sum(totPower2)
+
+        else:
+            totPower2 = data3D.sum() * (h[1] - h[0]) * (v[1] - v[0])
 
     return totPower2
 
+
+# def _evaluate_elementwise(func, x):
+#     """
+#     Apply a scalar-only function elementwise to x, preserving its shape.
+#     x can be a scalar (0-d) or an array of any shape (e.g. an energy value
+#     per (H,V) point).
+#     """
+#     x = numpy.asarray(x)
+#     if x.ndim == 0:
+#         return func(float(x))
+#     return numpy.array([func(float(v)) for v in x.ravel()]).reshape(x.shape)
+#
 
 def calculate_component_absorbance_and_transmittance(
     e0, h0, v0,
@@ -101,7 +125,7 @@ def calculate_component_absorbance_and_transmittance(
     h = h0.copy()
     v = v0.copy()
 
-    transmittance = numpy.ones((e.size,h.size,v.size))
+    transmittance = numpy.ones((e.shape[0], h.size, v.size))
     E = e.copy()
     H = h.copy()
     V = v.copy()
@@ -175,9 +199,14 @@ def calculate_component_absorbance_and_transmittance(
         txt += txt_aperture
 
     if flags == 0:  # filter
-        for j, energy in enumerate(e):
-            tmp = material_constants_library.CS_Total_CP(substance, energy / 1000.0)
-            transmittance[j, :, :] = numpy.exp(-tmp * dens * (thick / 10.0))
+        if len(e.shape) == 1: # original
+            for j, energy in enumerate(e):
+                tmp = material_constants_library.CS_Total_CP(substance, energy / 1000.0)
+                transmittance[j, :, :] = numpy.exp(-tmp * dens * (thick / 10.0))
+        else: # harmonics
+            tmp = material_constants_library.CS_Total_CP(substance, e / 1000.0)
+            transmittance = numpy.exp(-tmp * dens * (thick / 10.0))
+
 
         # rotation
         H = h / numpy.cos(vrot * numpy.pi / 180)
@@ -200,19 +229,29 @@ def calculate_component_absorbance_and_transmittance(
         absorbance = 1.0 - transmittance
 
     elif flags == 1:  # mirror
-        tmp = numpy.zeros(e.size)
+        if len(e.shape) == 1: # original
 
-        for j, energy in enumerate(e):
-            tmp[j] = material_constants_library.Refractive_Index_Re(substance, energy / 1000.0, dens)
+            tmp = numpy.zeros(e.size)
 
-        if tmp[0] == 0.0:
-            raise Exception("Probably the substrance %s is wrong" % substance)
+            for j, energy in enumerate(e):
+                tmp[j] = material_constants_library.Refractive_Index_Re(substance, energy / 1000.0, dens)
 
-        delta = 1.0 - tmp
-        beta = numpy.zeros(e.size)
+            if tmp[0] == 0.0:
+                raise Exception("Probably the substrance %s is wrong" % substance)
 
-        for j, energy in enumerate(e):
-            beta[j] = material_constants_library.Refractive_Index_Im(substance, energy / 1000.0, dens)
+            delta = 1.0 - tmp
+            beta = numpy.zeros(e.size)
+
+            for j, energy in enumerate(e):
+                beta[j] = material_constants_library.Refractive_Index_Im(substance, energy / 1000.0, dens)
+
+        else:
+            # tmp = material_constants_library.CS_Total_CP(substance, e / 1000.0)
+            # transmittance = numpy.exp(-tmp * dens * (thick / 10.0))
+
+            tmp = material_constants_library.Refractive_Index_Re(substance, e / 1000.0, dens)
+            delta = 1.0 - tmp
+            beta = material_constants_library.Refractive_Index_Im(substance, e / 1000.0, dens)
 
         try:
             (rs, rp, runp) = reflectivity_fresnel(refraction_index_beta=beta, refraction_index_delta=delta, \
@@ -325,83 +364,34 @@ def calculate_component_absorbance_and_transmittance(
         # total thickness is |front - back profiles|
         thick_interpolated = numpy.abs(thick_interpolated - thick_interpolated_back)
 
-        for j, energy in enumerate(e):
-            tmp = material_constants_library.CS_Total_CP(substance, energy / 1000.0)
-            transmittance[j, :, :] = numpy.exp(-tmp * dens * (thick_interpolated[:, :] / 10.0))
+        if len(e.shape) == 1: # original
+            for j, energy in enumerate(e):
+                tmp = material_constants_library.CS_Total_CP(substance, energy / 1000.0)
+                transmittance[j, :, :] = numpy.exp(-tmp * dens * (thick_interpolated[:, :] / 10.0))
+        else: # vs harmonics
+            tmp = material_constants_library.CS_Total_CP(substance, e / 1000.0)
+            for j, energy in enumerate(e):
+                transmittance[j, :, :] = numpy.exp(-tmp[j, :, :] * dens * (thick_interpolated[:, :] / 10.0))
 
         absorbance = 1.0 - transmittance
 
     elif flags == 6:  # multilayer
-        tmp = numpy.zeros(e.size)
-        try:
-            f = h5py.File(multilayer_file, 'r')
-            density1 = f["MLayer/parameters/density1"][()]
-            density2 = f["MLayer/parameters/density2"][()]
-            densityS = f["MLayer/parameters/densityS"][()]
-            gamma1 = numpy.array(f["MLayer/parameters/gamma1"])
-            material1 = f["MLayer/parameters/material1"][()]
-            material2 = f["MLayer/parameters/material2"][()]
-            materialS = f["MLayer/parameters/materialS"][()]
-            mlroughness1 = numpy.array(f["MLayer/parameters/mlroughness1"])
-            mlroughness2 = numpy.array(f["MLayer/parameters/mlroughness2"])
-            roughnessS = f["MLayer/parameters/roughnessS"][()]
-            np = f["MLayer/parameters/np"][()]
-            npair = f["MLayer/parameters/npair"][()]
-            thick = numpy.array(f["MLayer/parameters/thick"])
-
-            thetaN = numpy.array(f["MLayer/parameters/thetaN"])
-            energyN = numpy.array(f["MLayer/parameters/energyN"])
-            theta1 = numpy.array(f["MLayer/parameters/theta1"])
-
-            f.close()
-
-            if isinstance(material1, bytes): material1 = material1.decode("utf-8")
-            if isinstance(material2, bytes): material2 = material2.decode("utf-8")
-            if isinstance(materialS, bytes): materialS = materialS.decode("utf-8")
-
-            if verbose:
-                print("===== data read from file: %s ======" % multilayer_file)
-                print("density1      = ", density1)
-                print("density2      = ", density2)
-                print("densityS      = ", densityS)
-                print("gamma1        = ", gamma1)
-                print("material1  (even, closer to substrte) = ", material1)
-                print("material2  (odd)                      = ", material2)
-                print("materialS  (substrate)                = ", materialS)
-                print("mlroughness1  = ", mlroughness1)
-                print("mlroughness2  = ", mlroughness2)
-                print("roughnessS    = ", roughnessS)
-                print("np            = ", np)
-                print("npair         = ", npair)
-                print("thick         = ", thick)
-                print("thetaN        = ", thetaN)
-                print("theta1        = ", theta1)
-                print("energyN        = ", energyN)
-                print("=====================================\n\n")
-
-            out = MLayer.initialize_from_bilayer_stack(
-                material_S=materialS, density_S=densityS, roughness_S=roughnessS,
-                material_E=material1, density_E=density1, roughness_E=mlroughness1[0],
-                material_O=material2, density_O=density2, roughness_O=mlroughness2[0],
-                bilayer_pairs=np,
-                bilayer_thickness=thick[0],
-                bilayer_gamma=gamma1[0],
-            )
-
-            rs, rp = out.scan_energy(e, theta1=numpy.degrees(angle * 1e-3), h5file="") # result R in aplitude
-            rs = numpy.abs(rs)
-            rp = numpy.abs(rp)
-
-        except:
-            raise Exception("Error reading file: %s" % multilayer_file)
+        out = get_multilayer_instance(multilayer_file, material_constants_library=None, verbose=0)
+        rs, rp = out.scan_energy(e, numpy.degrees(angle * 1e-3))
 
         if defection == 0:  # horizontally deflecting
-            for j, energy in enumerate(e):
-                transmittance[j, :, :] = rp[j]**2
+            if len(e.shape) == 1: # usual case: vs energy
+                for j, energy in enumerate(e):
+                    transmittance[j, :, :] = rp[j] ** 2
+            else: # vs harmonics
+                transmittance = rp ** 2
             H = h / numpy.sin(angle * 1e-3)
         elif defection == 1:  # vertically deflecting
-            for j, energy in enumerate(e):
-                transmittance[j, :, :] = rs[j]**2
+            if len(e.shape) == 1:  # usual case: vs energy
+                for j, energy in enumerate(e):
+                    transmittance[j, :, :] = rs[j] ** 2
+            else:
+                transmittance = rs ** 2
             V = v / numpy.sin(angle * 1e-3)
 
         # size
@@ -508,15 +498,14 @@ def apply_transmittance_to_incident_beam(transmittance, p0, e0, h0, v0,
 
         nh = int(h_old.size * interpolation_factor_h)
         nv = int(v_old.size * interpolation_factor_v)
-        p_transmitted = numpy.zeros((e.size, nh, nv))
+        p_transmitted = numpy.zeros((e.shape[0], nh, nv))
 
         print("Interpolating from ",p_transmitted_old.shape, " to ", p_transmitted.shape)
         h = numpy.linspace(h_old[0], h_old[-1], nh)
         v = numpy.linspace(v_old[0], v_old[-1], nv)
 
 
-
-        for i in range(e.size):
+        for i in range(e.shape[0]):
             f = RectBivariateSpline(h_old,
                                     v_old,
                                     p_transmitted_old[i, :, :])
@@ -771,75 +760,314 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
 #
 # info
 #
-def info_total_power(p, e, v, h, transmittance, absorbance, EL1_FLAG=1):
-    txt = ""
-    txt += "\n\n\n"
-    power_input = integral_3d(p, e, h, v, method=0) * codata.e * 1e3
-    txt += '      Input beam power: %f W\n'%(power_input)
+def info_total_power(p, e, v, h, transmittance, absorbance, EL1_FLAG=1,
+                     method=2, # 0=trapezoid, 1=sum, 2=both
+                     ):
 
-    power_transmitted = integral_3d(p * transmittance, e, h, v, method=0) * codata.e * 1e3
-    power_absorbed = integral_3d(p * absorbance, e, h, v, method=0) * codata.e * 1e3
+    method_str = ['trapezoid','sum']
 
-    power_lost = power_input - ( power_transmitted +  power_absorbed)
-    if numpy.abs( power_lost ) > 1e-9:
-        txt += '      Beam power not considered (removed by o.e. acceptance): %6.3f W (accepted: %6.3f W)\n' % \
-               (power_lost, power_input - power_lost)
-
-    txt += '      Beam power absorbed by optical element: %6.3f W\n' % power_absorbed
-
-    if EL1_FLAG == 1:
-        txt += '      Beam power reflected after optical element: %6.3f W\n' % power_transmitted
+    if method == 2:
+        methods = [0, 1]
     else:
-        txt += '      Beam power transmitted after optical element: %6.3f W\n' % power_transmitted
+        methods = [method]
+
+    txt = ""
+    for method in methods:
+        txt += "\n\n\n"
+        txt += "(info_total_power: method=%d (%s))\n" % (method, method_str[method])
+
+        power_input = integral_3d(p, e, h, v, method=method) * codata.e * 1e3
+        txt += '      Input beam power: %f W\n'%(power_input)
+
+        power_transmitted = integral_3d(p * transmittance, e, h, v, method=method) * codata.e * 1e3
+        power_absorbed = integral_3d(p * absorbance, e, h, v, method=method) * codata.e * 1e3
+
+        power_lost = power_input - ( power_transmitted +  power_absorbed)
+        if numpy.abs( power_lost ) > 1e-9:
+            txt += '      Beam power not considered (removed by o.e. acceptance): %6.3f W (accepted: %6.3f W)\n' % \
+                   (power_lost, power_input - power_lost)
+
+        txt += '      Beam power absorbed by optical element: %6.3f W\n' % power_absorbed
+
+        if EL1_FLAG == 1:
+            txt += '      Beam power reflected after optical element: %6.3f W\n' % power_transmitted
+        else:
+            txt += '      Beam power transmitted after optical element: %6.3f W\n' % power_transmitted
 
     return txt
 
 if __name__ == "__main__":
-    GAPH = 0.002
-    GAPV = 0.002
-    HSLITPOINTS = 601
-    VSLITPOINTS = 401
-    PHOTONENERGYMIN = 7000.0
-    PHOTONENERGYMAX = 8000.0
-    PHOTONENERGYPOINTS = 20
-
-    e0 = numpy.linspace(PHOTONENERGYMIN, PHOTONENERGYMAX, PHOTONENERGYPOINTS)
-    h0 = numpy.linspace(-0.5 * GAPH, 0.5 * GAPH, HSLITPOINTS)
-    v0 = numpy.linspace(-0.5 * GAPV, 0.5 * GAPV, VSLITPOINTS)
-
-
-
-    transmittance, absorbance, E, H, V, txt  = calculate_component_absorbance_and_transmittance(
-                    e0, # energy in eV
-                    h0, # h in mm
-                    v0, # v in mm
-                    substance='Be',
-                    thick=0.5,
-                    angle=3.0,
-                    defection=1,
-                    dens='?',
-                    roughness=0.0,
-                    flags=6, # 0 = Filter, 2=Aperture, 5 = Thin object filter, 6=Multilayer, 7 External File
-                    hgap=0.2e-3,
-                    vgap=0.1e-3,
-                    hgapcenter=0.1e-3,
-                    vgapcenter=0.1e-3,
-                    gapshape=1, # 0=rect
-                    hmag=1.0,
-                    vmag=1.0,
-                    hrot=0.0,
-                    vrot=0.0,
-                    thin_object_file='/home/srio/Oasys/lens.h5',
-                    thin_object_thickness_outside_file_area=163e-6,
-                    thin_object_back_profile_flag=0, # 0= z=0, 1=Back profile from file z(x,y)
-                    thin_object_back_profile_file='/home/srio/Oasys/lens.h5',
-                    multilayer_file='/home/srio/Oasys/multilayerTiC.h5',
-                    )
-
     from srxraylib.plot.gol import plot_image, plot
 
-    plot(e0, transmittance[:,0,0],
-         e0, absorbance[:,0,0],
-         xtitle="Photon energy [eV]", legend=["Transmittance","Absorbance"], show=0)
-    plot_image(transmittance[0,:,:], h0, v0,title="Transmittance at E=%g eV" % (e0[0]),
-               xtitle="H [m]",ytitle="V [m]",aspect='auto')
+    if 0: # multilayer
+        GAPH = 0.002
+        GAPV = 0.002
+        HSLITPOINTS = 601
+        VSLITPOINTS = 401
+        PHOTONENERGYMIN = 7000.0
+        PHOTONENERGYMAX = 8000.0
+        PHOTONENERGYPOINTS = 20
+
+        e0 = numpy.linspace(PHOTONENERGYMIN, PHOTONENERGYMAX, PHOTONENERGYPOINTS)
+        h0 = numpy.linspace(-0.5 * GAPH, 0.5 * GAPH, HSLITPOINTS)
+        v0 = numpy.linspace(-0.5 * GAPV, 0.5 * GAPV, VSLITPOINTS)
+
+
+
+        transmittance, absorbance, E, H, V, txt  = calculate_component_absorbance_and_transmittance(
+                        e0, # energy in eV
+                        h0, # h in mm
+                        v0, # v in mm
+                        substance='Be',
+                        thick=0.5,
+                        angle=3.0,
+                        defection=1,
+                        dens='?',
+                        roughness=0.0,
+                        flags=6, # 0 = Filter, 2=Aperture, 5 = Thin object filter, 6=Multilayer, 7 External File
+                        hgap=0.2e-3,
+                        vgap=0.1e-3,
+                        hgapcenter=0.1e-3,
+                        vgapcenter=0.1e-3,
+                        gapshape=1, # 0=rect
+                        hmag=1.0,
+                        vmag=1.0,
+                        hrot=0.0,
+                        vrot=0.0,
+                        thin_object_file='/home/srio/Oasys/lens.h5',
+                        thin_object_thickness_outside_file_area=163e-6,
+                        thin_object_back_profile_flag=0, # 0= z=0, 1=Back profile from file z(x,y)
+                        thin_object_back_profile_file='/home/srio/Oasys/lens.h5',
+                        multilayer_file='/home/srio/Oasys/multilayerTiC.h5',
+                        )
+
+
+
+        plot(e0, transmittance[:,0,0],
+             e0, absorbance[:,0,0],
+             xtitle="Photon energy [eV]", legend=["Transmittance","Absorbance"], show=0)
+        plot_image(transmittance[0,:,:], h0, v0,title="Transmittance at E=%g eV" % (e0[0]),
+                   xtitle="H [m]",ytitle="V [m]",aspect='auto')
+        if 0:
+            from srxraylib.plot.gol import plot_image
+            import scipy.constants as codata
+            from xoppylib.power.power3d import integral_2d
+
+            # transmitted/reflected beam
+
+            spectral_power_transmitted = f_transmitted * codata.e * 1e3
+            plot_image(spectral_power_transmitted[0, :, :], h, v,
+                       title="Transmitted Spectral Power Density [W/eV/mm2] at E=%g eV" % (100.0), xtitle="H [mm]",
+                       ytitle="V [mm]", aspect='auto')
+
+            power_density_transmitted = numpy.trapezoid(spectral_power_transmitted, e, axis=0)
+            power_density_integral = integral_2d(power_density_transmitted, h, v)
+            plot_image(power_density_transmitted, h, v,
+                       xtitle='H [mm] (normal to beam)',
+                       ytitle='V [mm] (normal to beam)',
+                       title='Power Density [W/mm^2]. Integral: %6.3f W' % power_density_integral, aspect='auto')
+
+            # local absorption
+
+            spectral_power_density_absorbed = f_absorbed * codata.e * 1e3
+
+            plot_image(spectral_power_density_absorbed[0, :, :], H, V,
+                       title="Absorbed Spectral Power Density [W/eV/mm2] at E=%g eV" % (100.0), xtitle="H [mm]",
+                       ytitle="V [mm]", aspect='auto')
+
+            power_density_absorbed = numpy.trapezoid(spectral_power_density_absorbed, E, axis=0)
+            power_density_integral = integral_2d(power_density_absorbed, H, V)
+            plot_image(power_density_absorbed, H, V,
+                       xtitle='H [mm] (o.e. coordinates)',
+                       ytitle='V [mm] (o.e. coordinates)',
+                       title='Absorbed Power Density [W/mm^2]. Integral: %6.3f W' % power_density_integral,
+                       aspect='auto')
+
+    if 1: # test harmonic calculation
+        #
+        # script to make the calculations (created by XOPPY:undulator_spectrum)
+        #
+        from xoppylib.sources.xoppy_undulators import xoppy_calc_undulator_power_density_from_harmonics
+
+        # define inputs here to be written in h5 file
+        h5_parameters = dict()
+        h5_parameters["ELECTRONENERGY"] = 6.0
+        h5_parameters["ELECTRONENERGYSPREAD"] = 0.001
+        h5_parameters["ELECTRONCURRENT"] = 0.2
+        h5_parameters["ELECTRONBEAMSIZEH"] = 3.34281e-05
+        h5_parameters["ELECTRONBEAMSIZEV"] = 7.28139e-06
+        h5_parameters["ELECTRONBEAMDIVERGENCEH"] = 4.51097e-06
+        h5_parameters["ELECTRONBEAMDIVERGENCEV"] = 1.94034e-06
+        h5_parameters["PERIODID"] = 0.018
+        h5_parameters["NPERIODS"] = 111
+        h5_parameters["KV"] = 1.6563
+        h5_parameters["KH"] = 0.0
+        h5_parameters["KPHASE"] = 0.0
+        h5_parameters["DISTANCE"] = 23.0
+        h5_parameters["GAPH"] = 0.01
+        h5_parameters["GAPV"] = 0.01
+        h5_parameters["HSLITPOINTS"] = 51
+        h5_parameters["VSLITPOINTS"] = 51
+        h5_parameters["METHOD"] = 1  # 0=urgent (fortran), 1=urgentpy (python)
+        h5_parameters["USEEMITTANCES"] = 1
+        h5_parameters["MASK_FLAG"] = 0
+        h5_parameters["MASK_ROT_H_DEG"] = 0.0
+        h5_parameters["MASK_ROT_V_DEG"] = 0.0
+        h5_parameters["MASK_H_MIN"] = -1000.0
+        h5_parameters["MASK_H_MAX"] = 1000.0
+        h5_parameters["MASK_V_MIN"] = -1000.0
+        h5_parameters["MASK_V_MAX"] = 1000.0
+        h5_parameters["harmonic_max"] = 5  # maximum harmonic to calculate
+        h5_parameters["photon_energy_bin"] = 300.0  # in eV, for calculating Spectral Power
+
+        horizontal, vertical, power_density, code, power_density_harmonics, energy, spectral_power, spectral_power_energy, flux3D = xoppy_calc_undulator_power_density_from_harmonics(
+            ELECTRONENERGY=h5_parameters["ELECTRONENERGY"],
+            ELECTRONENERGYSPREAD=h5_parameters["ELECTRONENERGYSPREAD"],
+            ELECTRONCURRENT=h5_parameters["ELECTRONCURRENT"],
+            ELECTRONBEAMSIZEH=h5_parameters["ELECTRONBEAMSIZEH"],
+            ELECTRONBEAMSIZEV=h5_parameters["ELECTRONBEAMSIZEV"],
+            ELECTRONBEAMDIVERGENCEH=h5_parameters["ELECTRONBEAMDIVERGENCEH"],
+            ELECTRONBEAMDIVERGENCEV=h5_parameters["ELECTRONBEAMDIVERGENCEV"],
+            PERIODID=h5_parameters["PERIODID"],
+            NPERIODS=h5_parameters["NPERIODS"],
+            KV=h5_parameters["KV"],
+            KH=h5_parameters["KH"],
+            KPHASE=h5_parameters["KPHASE"],
+            DISTANCE=h5_parameters["DISTANCE"],
+            GAPH=h5_parameters["GAPH"],
+            GAPV=h5_parameters["GAPV"],
+            HSLITPOINTS=h5_parameters["HSLITPOINTS"],
+            VSLITPOINTS=h5_parameters["VSLITPOINTS"],
+            METHOD=h5_parameters["METHOD"],
+            harmonic_max=h5_parameters["harmonic_max"],
+            USEEMITTANCES=h5_parameters["USEEMITTANCES"],
+            MASK_FLAG=h5_parameters["MASK_FLAG"],
+            MASK_ROT_H_DEG=h5_parameters["MASK_ROT_H_DEG"],
+            MASK_ROT_V_DEG=h5_parameters["MASK_ROT_V_DEG"],
+            MASK_H_MIN=h5_parameters["MASK_H_MIN"],
+            MASK_H_MAX=h5_parameters["MASK_H_MAX"],
+            MASK_V_MIN=h5_parameters["MASK_V_MIN"],
+            MASK_V_MAX=h5_parameters["MASK_V_MAX"],
+            h5_file="undulator_power_density_from_harmonics.h5",
+            h5_entry_name="XOPPY_POWERDENSITY_FROM_HARMONICS",
+            h5_initialize=True,
+            h5_parameters=h5_parameters,
+            photon_energy_bin=h5_parameters["photon_energy_bin"],
+        )
+
+        #
+        # script to make the calculations (created by XOPPY:power3Dcomponent)
+        #
+
+        import numpy
+
+        try:
+            import xraylib
+        except:
+            print("xraylib not available")
+        from dabax.dabax_xraylib import DabaxXraylib
+        from xoppylib.power.power3d import calculate_component_absorbance_and_transmittance
+        from xoppylib.power.power3d import apply_transmittance_to_incident_beam
+
+        # compute local transmittance and absorbance
+        e0, h0, v0, f0 = energy, horizontal, vertical, flux3D
+        transmittance, absorbance, E, H, V, txt = calculate_component_absorbance_and_transmittance(
+            e0,  # energy in eV
+            h0,  # h in mm
+            v0,  # v in mm
+            substance='Rh',
+            thick=0.5,
+            angle=3.0,
+            defection=1,
+            dens='?',
+            roughness=0.0,
+            flags=1,
+            # 0=Filter 1=Mirror 2=Aperture 3=magnifier, 4=Screen rotation  5=Thin object  6=Multilayer 7=External file
+            hgap=1000.0,
+            vgap=1000.0,
+            hgapcenter=0.0,
+            vgapcenter=0.0,
+            hmag=1.0,
+            vmag=1.0,
+            hrot=0.0,
+            vrot=0.0,
+            thin_object_file='',
+            thin_object_thickness_outside_file_area=0.0,
+            thin_object_back_profile_flag=0,
+            thin_object_back_profile_file='',
+            multilayer_file='',
+            external_reflectivity_file='',
+            material_constants_library=DabaxXraylib(file_f1f2="f1f2_Windt.dat",
+                                                    file_CrossSec="CrossSec_EPDL97.dat"),
+        )
+
+
+        # from srxraylib.plot.gol import plot
+
+        # plot(e.flatten(), transmittance.flatten(), linestyle="", marker=".")
+        plot(E.flatten(), transmittance.flatten(), marker='.', linestyle="", xrange=[5000, 35000])
+        plot(E.flatten(), transmittance.flatten(), marker='.', linestyle="")
+        plot(E.flatten(), absorbance.flatten(), marker='.', linestyle="", xrange=[5000, 35000])
+        plot(E.flatten(), absorbance.flatten(), marker='.', linestyle="")
+        # # apply transmittance to incident beam
+        # f_transmitted, e, h, v = apply_transmittance_to_incident_beam(transmittance, f0, e0, h0, v0,
+        #                                                               flags=0,
+        #                                                               hgap=1000.0,
+        #                                                               vgap=1000.0,
+        #                                                               hgapcenter=0.0,
+        #                                                               vgapcenter=0.0,
+        #                                                               hmag=1.0,
+        #                                                               vmag=1.0,
+        #                                                               interpolation_flag=0,
+        #                                                               interpolation_factor_h=1.0,
+        #                                                               interpolation_factor_v=1.0,
+        #                                                               slit_crop=0,
+        #                                                               )
+        #
+        # f_absorbed = f0 * absorbance / (H[0] / h0[0]) / (V[0] / v0[0])
+        #
+        # # data to pass
+        # energy, horizontal, vertical, flux3D = e, h, v, f_transmitted
+        #
+        # #
+        # # example plots
+        # #
+        # if True:
+        #     from srxraylib.plot.gol import plot_image
+        #     import scipy.constants as codata
+        #     from xoppylib.power.power3d import integral_2d
+        #
+        #     # transmitted/reflected beam
+        #
+        #     spectral_power_transmitted = f_transmitted * codata.e * 1e3
+        #     plot_image(spectral_power_transmitted[0, :, :], h, v,
+        #                title="Transmitted Spectral Power Density [W/eV/mm2] at lower energy", xtitle="H [mm]",
+        #                ytitle="V [mm]", aspect='auto')
+        #
+        #     power_density_transmitted = numpy.trapezoid(spectral_power_transmitted, e, axis=0)
+        #     power_density_integral = integral_2d(power_density_transmitted, h, v)
+        #     plot_image(power_density_transmitted, h, v,
+        #                xtitle='H [mm] (normal to beam)',
+        #                ytitle='V [mm] (normal to beam)',
+        #                title='Power Density [W/mm^2]. Integral: %6.3f W' % power_density_integral, aspect='auto')
+        #
+        #     # local absorption
+        #
+        #     spectral_power_density_absorbed = f_absorbed * codata.e * 1e3
+        #
+        #     plot_image(spectral_power_density_absorbed[0, :, :], H, V,
+        #                title="Absorbed Spectral Power Density [W/eV/mm2] at lower energy", xtitle="H [mm]",
+        #                ytitle="V [mm]", aspect='auto')
+        #
+        #     power_density_absorbed = numpy.trapezoid(spectral_power_density_absorbed, E, axis=0)
+        #     power_density_integral = integral_2d(power_density_absorbed, H, V)
+        #     plot_image(power_density_absorbed, H, V,
+        #                xtitle='H [mm] (o.e. coordinates)',
+        #                ytitle='V [mm] (o.e. coordinates)',
+        #                title='Absorbed Power Density [W/mm^2]. Integral: %6.3f W' % power_density_integral,
+        #                aspect='auto')
+        #
+        # #
+        # # end script
+        # #
+

@@ -363,19 +363,20 @@ def xoppy_calc_undulator_power_density_from_harmonics(
     if METHOD == 0:
         code = "URGENT"
         print("Undulator power_density_from_harmonics calculation using URGENT. Please wait...")
-        h, v, p, power_density_harmonics, energy_harmonics = calc2d_from_harmonics_urgent(bl,
+        h, v, p, power_density_harmonics, energy_harmonics, flux = calc2d_from_harmonics_urgent(bl,
                                              fileName=outFile,
                                              fileAppend=False,
                                              hSlitPoints=HSLITPOINTS,
                                              vSlitPoints=VSLITPOINTS,
                                              zero_emittance=zero_emittance,
                                              harmonic_max=harmonic_max,
+                                             return_flux=True,
                                              )
         print("Done")
     if METHOD == 1:
         code = "URGENTPY"
         print("Undulator power_density_from_harmonics calculation using URGENTPY. Please wait...")
-        h, v, p, power_density_harmonics, energy_harmonics = calc2d_from_harmonics_urgentpy(
+        h, v, p, power_density_harmonics, energy_harmonics, flux = calc2d_from_harmonics_urgentpy(
                                             bl,
                                             fileName=outFile,
                                             fileAppend=False,
@@ -383,6 +384,7 @@ def xoppy_calc_undulator_power_density_from_harmonics(
                                             vSlitPoints=VSLITPOINTS,
                                             zero_emittance=zero_emittance,
                                             harmonic_max=harmonic_max,
+                                            return_flux=True,
                                             )
         print("Done")
 
@@ -414,24 +416,28 @@ def xoppy_calc_undulator_power_density_from_harmonics(
             if len(lower_window_h) > 0:
                 p[lower_window_h,:] = 0
                 power_density_harmonics[:, lower_window_h, :] = 0
+                flux[:, lower_window_h, :] = 0
 
         if MASK_H_MAX is not None:
             upper_window_h = numpy.where(h > MASK_H_MAX)
             if len(upper_window_h) > 0:
                 p[upper_window_h, :] = 0
                 power_density_harmonics[:, upper_window_h, :] = 0
+                flux[:, upper_window_h, :] = 0
 
         if MASK_V_MIN is not None:
             lower_window_v = numpy.where(v < MASK_V_MIN)
             if len(lower_window_v) > 0:
                 p[:, lower_window_v] = 0
                 power_density_harmonics[:, :, lower_window_v] = 0
+                flux[:, :, lower_window_v] = 0
 
         if MASK_V_MIN is not None:
             upper_window_v = numpy.where(v > MASK_V_MAX)
             if len(upper_window_v) > 0:
                 p[:, upper_window_v] = 0
                 power_density_harmonics[:, :, upper_window_v] = 0
+                flux[:, :, upper_window_v] = 0
 
         txt0 = "============= power density in the modified (masked) screen ==========\n"
     else:
@@ -498,7 +504,7 @@ def xoppy_calc_undulator_power_density_from_harmonics(
     spectral_power_energy = 0.5 * (bin_edges[:-1] + bin_edges[1:]) # bin centers
     spectral_power = power_vs_energy / photon_energy_bin
 
-    return h, v, p, code, power_density_harmonics, energy_harmonics, spectral_power, spectral_power_energy
+    return h, v, p, code, power_density_harmonics, energy_harmonics, spectral_power, spectral_power_energy, flux
 
 def xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001,ELECTRONCURRENT=0.2,\
                                        ELECTRONBEAMSIZEH=0.000395,ELECTRONBEAMSIZEV=9.9e-06,\
@@ -693,7 +699,7 @@ if __name__ == "__main__":
         e3, f3, _, _ = xoppy_calc_undulator_spectrum(METHOD=3, PHOTONENERGYPOINTS=2500)  # urgentpy
         plot(e0,f0,e1,f1,e2,f2,e3,f3, legend=["US","URGENT","SRW","URGENTPY"], grid=1)
 
-    if 1:  # power density
+    if 0:  # power density
         h0, v0, p0, code0  = xoppy_calc_undulator_power_density(METHOD=0, HSLITPOINTS=51, VSLITPOINTS=31,)  # us
         h1, v1, p1, code1  = xoppy_calc_undulator_power_density(METHOD=1, HSLITPOINTS=51, VSLITPOINTS=31,)  # urgent
         h2, v2, p2, code2  = xoppy_calc_undulator_power_density(METHOD=2, HSLITPOINTS=51, VSLITPOINTS=31,)  # srw
@@ -720,7 +726,7 @@ if __name__ == "__main__":
         e, h, v, p, code = xoppy_calc_undulator_radiation(ELECTRONENERGY=6.0, h5_file="test.h5",h5_entry_name="first_entry",h5_initialize=True)
         e, h, v, p, code = xoppy_calc_undulator_radiation(ELECTRONENERGY=7.0, h5_file="test.h5",h5_entry_name="second_entry",h5_initialize=False)
 
-    if False: # xoppy_calc_undulator_power_density_from_harmonics
+    if 1: # xoppy_calc_undulator_power_density_from_harmonics
 
         h5_parameters = dict()
         h5_parameters["ELECTRONENERGY"] = 6.0
@@ -752,7 +758,7 @@ if __name__ == "__main__":
         h5_parameters["harmonic_max"] = 20  # maximum harmonic to calculate
 
 
-        h, v, p, code, p_harmonics, e_harmonics, spectral_power, spectral_power_energy = xoppy_calc_undulator_power_density_from_harmonics(
+        h, v, p, code, p_harmonics, e_harmonics, spectral_power, spectral_power_energy, flux = xoppy_calc_undulator_power_density_from_harmonics(
             ELECTRONENERGY=h5_parameters["ELECTRONENERGY"],
             ELECTRONENERGYSPREAD=h5_parameters["ELECTRONENERGYSPREAD"],
             ELECTRONCURRENT=h5_parameters["ELECTRONCURRENT"],

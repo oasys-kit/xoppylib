@@ -997,16 +997,7 @@ class MLayer(object):
         energy_array = numpy.linspace(energy1, energy2, energyN)
         theta_array = numpy.linspace(theta1, theta2, thetaN)
 
-        ENERGY = numpy.outer(energy_array, numpy.ones_like(theta_array))
-        THETA = numpy.outer(numpy.ones_like(energy_array), theta_array)
-
-        ENERGY_flatten = ENERGY.flatten()
-        THETA_flatten = THETA.flatten()
-
-        sin_ref = numpy.sin(THETA_flatten * numpy.pi / 180)
-        COS_POLE = 1.0
-        k_what = 1
-        R_S, R_P, _, _ = self._reflec(ENERGY_flatten, sin_ref, COS_POLE, k_what)
+        R_S, R_P = self.scan_arrays(energy_array, theta_array)
 
         R_S_array =   R_S.reshape((energyN, thetaN))
         R_P_array =   R_P.reshape((energyN, thetaN))
@@ -1083,6 +1074,99 @@ class MLayer(object):
 
         return R_S_array, R_P_array, energy_array, theta_array
 
+    def scan_arrays(self, energy_array, theta_array_deg):
+        """
+        this method computes the multilayer reflectivity vs photon energy and/or angle.
+        The reflectivity values are for amplitude.
+
+        Parameters
+        ----------
+        energy_array : array
+            Array with energy in eV.
+        theta_array_deg : array
+            Array with grazing angles in deg.
+
+
+        Returns
+        -------
+        tuple
+            (R_S_array, R_P_array).
+
+        """
+
+        if self.pre_mlayer_dict is None:
+            raise Exception("load preprocessor file before!")
+
+
+        ENERGY = numpy.outer(energy_array, numpy.ones_like(theta_array_deg))
+        THETA = numpy.outer(numpy.ones_like(energy_array), theta_array_deg)
+        s = ENERGY.shape
+
+        ENERGY_flatten = ENERGY.flatten()
+        THETA_flatten = THETA.flatten()
+
+
+
+        sin_ref = numpy.sin(THETA_flatten * numpy.pi / 180)
+        COS_POLE = 1.0
+        k_what = 1
+
+        # Sort and track original indices
+        sort_idx = numpy.argsort(ENERGY_flatten)
+        unsort_idx = numpy.argsort(sort_idx)
+
+        R_S_sorted, R_P_sorted, _, _ = self._reflec(ENERGY_flatten[sort_idx], sin_ref[sort_idx], COS_POLE, k_what)
+        # Unsort and reshape back to original shape
+        R_S = R_S_sorted[unsort_idx].reshape(s)
+        R_P = R_P_sorted[unsort_idx].reshape(s)
+
+
+        return  R_S, R_P
+
+
+    def scan_energy(self, energy_array, theta_deg):
+        """
+        Compute multilayer reflectivity for an energy array of arbitrary shape
+        at a single fixed grazing angle.
+
+        Unlike ``scan`` / ``scan_arrays``, the output arrays have exactly the
+        same shape as ``energy_array``, so callers that work with 2-D or 3-D
+        energy grids (e.g. angle-dependent resonant energies from undulator
+        harmonics) can use the result directly without reshaping.
+
+        Parameters
+        ----------
+        energy_array : array_like
+            Photon energies in eV.  Any shape is accepted.
+        theta_deg : float
+            Grazing angle in degrees (single value).
+
+        Returns
+        -------
+        R_S : numpy.ndarray
+            S-polarisation reflectivity amplitude, same shape as *energy_array*.
+        R_P : numpy.ndarray
+            P-polarisation reflectivity amplitude, same shape as *energy_array*.
+        """
+        if self.pre_mlayer_dict is None:
+            raise Exception("load preprocessor file before!")
+
+        energy_array = numpy.asarray(energy_array, dtype=float)
+        original_shape = energy_array.shape
+        e_flat = energy_array.flatten()
+
+        sin_ref = numpy.full_like(e_flat, numpy.sin(theta_deg * numpy.pi / 180))
+
+        sort_idx = numpy.argsort(e_flat)
+        unsort_idx = numpy.argsort(sort_idx)
+
+        R_S_sorted, R_P_sorted, _, _ = self._reflec(
+            e_flat[sort_idx], sin_ref[sort_idx], COS_POLE=1.0)
+
+        R_S = R_S_sorted[unsort_idx].reshape(original_shape)
+        R_P = R_P_sorted[unsort_idx].reshape(original_shape)
+
+        return R_S, R_P
 
     def reflectivity(self, grazing_angle_deg, photon_energy_ev, Y=0.0):
         """
@@ -1242,7 +1326,6 @@ class MLayer(object):
         # ! C			[ O ] R_S 	: s-pol    "  "
         # ! C
         # ! C---
-
         DELO, BETO, DELE, BETE, DELS, BETS = self._interpolate_refraction_index(PHOT_ENER)
 
         NIN = self.pre_mlayer_dict["np"]
@@ -1256,7 +1339,6 @@ class MLayer(object):
         # get the thickness arrays
         t_e = gamma1 * t_oe
         t_o = (1.0 - gamma1) * t_oe
-
         mlroughness1 = self.pre_mlayer_dict["mlroughness1"]
         mlroughness2 = self.pre_mlayer_dict["mlroughness2"]
 
@@ -1539,7 +1621,7 @@ class MLayer(object):
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot
 
-    if 1:
+    if 0:
         a = MLayer.pre_mlayer(
             FILE="pre_mlayer.dat",
             E_MIN=110.0, E_MAX=500.0,
@@ -1562,19 +1644,14 @@ if __name__ == "__main__":
                 energyN=100, energy1=300.0, energy2=500.0,
                 thetaN=1, theta1=45.0, theta2=45.0)
 
-        print(rs.shape, rp.shape, e.shape, t.shape)
-
         plot(e, rs[:,0], xtitle="Photon energy [eV]", ytitle="Reflectivity")
 
         #
         # energy scan 2
         #
-        # energy_array = numpy.linspace(300.0, 500.0, 100)
-        # rs, rp = a.scan_energy(energy_array, theta1=45.0, h5file="")
         rs, rp, energy_array, theta_array = a.scan(energyN=100, energy1=300.0, energy2=500.0,
             thetaN=1, theta1=45.0, theta2=0.75, verbose=1, h5file="")
 
-        print(rs.shape, rp.shape, energy_array.shape)
 
         plot(energy_array, rs, xtitle="Photon energy [eV]", ytitle="Reflectivity")
 
@@ -1600,7 +1677,7 @@ if __name__ == "__main__":
     #
     # read preprocessor file
     #
-    if 1:
+    if 0:
         import xraylib
 
         MLayer.pre_mlayer(
@@ -1631,7 +1708,7 @@ if __name__ == "__main__":
     #
     #
 
-    if 0:  #TODO: the scan without preprocessor file is very slow with dabax...
+    if 0:
         import xraylib
         from xoppylib.mlayer import MLayer
 
@@ -1642,7 +1719,8 @@ if __name__ == "__main__":
             bilayer_pairs=50,
             bilayer_thickness=50.0,
             bilayer_gamma=0.5,
-            material_constants_library=DabaxXraylib(),
+            use_xraylib_or_dabax=1,
+            dabax=DabaxXraylib()
         )
 
         for key in out.pre_mlayer_dict.keys():

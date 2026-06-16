@@ -79,6 +79,7 @@ def info_params(mZ):
 
     return txt
 
+'''
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot_image
 
@@ -100,7 +101,7 @@ if __name__ == "__main__":
 
     plot_image(data_fitted.reshape((nx,ny)),x0,y0,title="FIT")
 
-
+'''
 
     
 

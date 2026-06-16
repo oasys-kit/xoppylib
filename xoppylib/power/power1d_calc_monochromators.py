@@ -17,11 +17,7 @@ try: import xraylib
 except: pass
 from dabax.dabax_xraylib import DabaxXraylib
 
-def power1d_calc_multilayer_monochromator(filename,
-                                          energies=numpy.linspace(7900, 8100, 200),
-                                          grazing_angle_deg=0.4,
-                                          material_constants_library=None,
-                                          verbose=1):
+def get_multilayer_instance(filename, material_constants_library=None, verbose=1):
     try:
         f = h5py.File(filename, 'r')
         density1 = f["MLayer/parameters/density1"][()]
@@ -34,8 +30,11 @@ def power1d_calc_multilayer_monochromator(filename,
         mlroughness1 = numpy.array(f["MLayer/parameters/mlroughness1"])
         mlroughness2 = numpy.array(f["MLayer/parameters/mlroughness2"])
         roughnessS = f["MLayer/parameters/roughnessS"][()]
-        # np = f["MLayer/parameters/np"][()]
         npair = numpy.abs(f["MLayer/parameters/npair"][()])
+        try:
+            np = f["MLayer/parameters/np"][()]
+        except:
+            np = numpy.abs(npair)
         thick = numpy.array(f["MLayer/parameters/thick"])
 
         f.close()
@@ -59,8 +58,6 @@ def power1d_calc_multilayer_monochromator(filename,
             # print("np            = ", np            )
             print("npair         = ", npair         )
             print("thick         = ", thick         )
-            print("Calculation for %d points of energy in [%.3f, %.3f] eV for theta_grazing=%.3f deg" % (
-                energies.size, energies[0], energies[-1], grazing_angle_deg))
             print("=====================================\n\n")
     except:
         raise Exception("Error reading file: %s" % filename)
@@ -86,11 +83,24 @@ def power1d_calc_multilayer_monochromator(filename,
             dabax=dabax,
         )
 
+        return out
+    except:
+        raise Exception("Error defining mlayer instance: %s" % filename)
+
+
+def power1d_calc_multilayer_monochromator(filename,
+                                          energies=numpy.linspace(7900, 8100, 200),
+                                          grazing_angle_deg=0.4,
+                                          material_constants_library=None,
+                                          verbose=1):
+
+    out = get_multilayer_instance(filename, material_constants_library=material_constants_library,
+                                  verbose=verbose)
+    try:
         rs, rp, _, _ = out.scan(h5file="",
             energyN=energies.size, energy1=energies[0], energy2=energies[-1],
             thetaN=1, theta1=grazing_angle_deg, theta2=grazing_angle_deg,
             verbose=verbose)
-
     except:
         raise Exception("Error calculating reflectivity: %s" % filename)
 
@@ -297,11 +307,17 @@ def power1d_calc_laue_monochromator(h_miller=1, k_miller=1, l_miller=1,
 
 if __name__ == "__main__":
     if 1: # mlayer
-        from dabax.dabax_xraylib import DabaxXraylib
         energies = numpy.linspace(3000, 30000, 20)
-        rs, rp = power1d_calc_multilayer_monochromator("/users/srio/Oasys/multilayerTiC.h5",
+        rs, rp = power1d_calc_multilayer_monochromator("/home/srio/Oasys2/multilayer.h5",
                                                        energies=energies, grazing_angle_deg=0.4,
                                                        material_constants_library=DabaxXraylib())
         from srxraylib.plot.gol import plot
         plot(energies, rs, energies, rp)
+
+    if 1: # mlayer
+        energies = numpy.linspace(1000, 35000, 200)
+        out = get_multilayer_instance("/home/srio/Oasys2/multilayer.h5", material_constants_library=DabaxXraylib())
+        rs, rp = out.scan_energy(energies, 1.0)
+        from srxraylib.plot.gol import plot
+        plot(energies.flatten(), rs.flatten(), energies.flatten(), rp.flatten())
 
