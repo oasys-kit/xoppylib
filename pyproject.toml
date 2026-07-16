@@ -1,3 +1,82 @@
+# Memorandum:
+#
+# Install from sources:
+#     git clone https://github.com/oasys-kit/xoppylib
+#     cd xoppylib
+#     python -m pip install -e . --no-deps --no-binary :all:
+#
+# ** IMPORTANT **
+# Do not upload this package to PyPI from a Windows machine
+# (it changes the mode +x on the binaries in xoppylib/bin).
+#
+# Install from PyPI:
+#     pip install xoppylib
+
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "xoppylib"
+version = "1.0.57"
+description = "XOPPY library"
+readme = "README.rst"
+license = "MIT"
+# license-files = ["LICENSE"]   # <- uncomment if a LICENSE file exists in the repo
+authors = [
+    { name = "Manuel Sanchez del Rio", email = "srio@esrf.eu" },
+]
+maintainers = [
+    { name = "Manuel Sanchez del Rio", email = "srio@esrf.eu" },
+]
+keywords = [
+    "x-ray",
+    "synchrotron radiation",
+    "materials x-ray optical constants",
+    "Insertion devices",
+    "Optical elements",
+    "simulation",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: Plugins",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "setuptools",
+    "numpy",
+    "scipy",
+    "srxraylib>=1.0.68",
+    "pySRU",
+    "h5py",
+    "dabax>=1.0.13",
+    "crystalpy>=0.0.27",
+]
+
+[project.urls]
+Homepage = "https://github.com/oasys-kit/xoppylib"
+Download = "https://github.com/oasys-kit/xoppylib"
+Documentation = "https://xoppylib.readthedocs.io/"
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+packages = [
+    "xoppylib",
+    "xoppylib.crystals",
+    "xoppylib.decorators",
+    "xoppylib.sources",
+    "xoppylib.srcalc",
+]
+
+[tool.setuptools.package-data]
+# NOTE: the old setup.py repeated the "xoppylib" key four times, so Python kept
+# only the last one -- i.e. ONLY "bin/*" was ever declared. The other three
+# patterns are restored here; see chat notes before shipping.
+"xoppylib" = ["*.txt", "data/*", "doc_txt/*.*", "bin/*"]
