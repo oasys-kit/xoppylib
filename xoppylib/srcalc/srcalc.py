@@ -12,6 +12,11 @@ SRCALC: auxiliary functions for mirror and grating ray-optics calculations.
 
 import numpy
 
+try:
+    from numpy import trapezoid
+except ImportError:
+    from numpy import trapz as trapezoid  # numpy < 2.0 has no numpy.trapezoid
+
 def load_srcalc_output_file(filename="D_IDPower.TXT",skiprows=5,four_quadrants=True,
                             do_plot=False,verbose=True):
     """
@@ -616,9 +621,9 @@ def trapezoidal_rule_2d(data2D,H=None,V=None):
         VV = numpy.arange(data2D.shape[1])
     else:
         VV = V[0, :]
-    try:    totPower2 = numpy.trapezoid(data2D, VV, axis=1)
+    try:    totPower2 = trapezoid(data2D, VV, axis=1)
     except: totPower2 = numpy.trapz(data2D, VV, axis=1)
-    try:    totPower2 = numpy.trapezoid(totPower2, HH, axis=0)
+    try:    totPower2 = trapezoid(totPower2, HH, axis=0)
     except: totPower2 = numpy.trapz(totPower2, HH, axis=0)
     return totPower2
 
@@ -627,9 +632,9 @@ def trapezoidal_rule_2d_1darrays(data2D,h=None,v=None):
         h = numpy.arange(data2D.shape[0])
     if v is None:
         v = numpy.arange(data2D.shape[1])
-    try:    totPower2 = numpy.trapezoid(data2D, v, axis=1)
+    try:    totPower2 = trapezoid(data2D, v, axis=1)
     except: totPower2 = numpy.trapz(data2D, v, axis=1)
-    try:    totPower2 = numpy.trapezoid(totPower2, h, axis=0)
+    try:    totPower2 = trapezoid(totPower2, h, axis=0)
     except: totPower2 = numpy.trapz(totPower2, h, axis=0)
     return totPower2
 

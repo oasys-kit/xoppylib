@@ -2,6 +2,11 @@
 XOPPY bending magnet and wiggler radiation spectrum and power calculations.
 """
 import numpy
+
+try:
+    from numpy import trapezoid
+except ImportError:
+    from numpy import trapz as trapezoid  # numpy < 2.0 has no numpy.trapezoid
 from srxraylib.sources import srfunc
 
 
@@ -123,7 +128,7 @@ def xoppy_calc_bm(MACHINE_NAME="ESRF bending magnet",
             cumulated_power_unit = 'W/mrad(Psi)'
         if LOG_CHOICE == 0:
             cumulated_power = spectral_power.cumsum() * numpy.abs(energy_ev[0] - energy_ev[1])
-            try:    print("\nPower from integral of spectrum (trapz rule): %8.3f %s" % (numpy.trapezoid(spectral_power, energy_ev), cumulated_power_unit))
+            try:    print("\nPower from integral of spectrum (trapz rule): %8.3f %s" % (trapezoid(spectral_power, energy_ev), cumulated_power_unit))
             except: print("\nPower from integral of spectrum (trapz rule): %8.3f %s" % (numpy.trapz(spectral_power, energy_ev), cumulated_power_unit))
         else:
             cumulated_power = numpy.zeros_like(energy_ev)
@@ -368,9 +373,9 @@ def trapezoidal_rule_2d_1darrays(data2D,h=None,v=None):
         h = numpy.arange(data2D.shape[0])
     if v is None:
         v = numpy.arange(data2D.shape[1])
-    try:    totPower2 = numpy.trapezoid(data2D, v, axis=1)
+    try:    totPower2 = trapezoid(data2D, v, axis=1)
     except: totPower2 = numpy.trapz(data2D, v, axis=1)
-    try:    totPower2 = numpy.trapezoid(totPower2, h, axis=0)
+    try:    totPower2 = trapezoid(totPower2, h, axis=0)
     except: totPower2 = numpy.trapz(totPower2, h, axis=0)
     return totPower2
 
@@ -694,9 +699,9 @@ def trapezoidal_rule_2d_1darrays(data2D,h=None,v=None):
         h = numpy.arange(data2D.shape[0])
     if v is None:
         v = numpy.arange(data2D.shape[1])
-    try:    totPower2 = numpy.trapezoid(data2D, v, axis=1)
+    try:    totPower2 = trapezoid(data2D, v, axis=1)
     except: totPower2 = numpy.trapz(data2D, v, axis=1)
-    try:    totPower2 = numpy.trapezoid(totPower2, h, axis=0)
+    try:    totPower2 = trapezoid(totPower2, h, axis=0)
     except: totPower2 = numpy.trapz(totPower2, h, axis=0)
     return totPower2
 

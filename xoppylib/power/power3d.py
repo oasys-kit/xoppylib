@@ -6,6 +6,11 @@
 #
 import os
 import numpy
+
+try:
+    from numpy import trapezoid
+except ImportError:
+    from numpy import trapz as trapezoid  # numpy < 2.0 has no numpy.trapezoid
 import scipy.constants as codata
 import h5py
 
@@ -30,9 +35,9 @@ def integral_2d(data2D,h=None,v=None, method=0):
         v = numpy.arange(data2D.shape[1])
 
     if method == 0:
-        try:    totPower2 = numpy.trapezoid(data2D, v, axis=1)
+        try:    totPower2 = trapezoid(data2D, v, axis=1)
         except: totPower2 = numpy.trapz(data2D, v, axis=1)
-        try:    totPower2 = numpy.trapezoid(totPower2, h, axis=0)
+        try:    totPower2 = trapezoid(totPower2, h, axis=0)
         except: totPower2 = numpy.trapz(totPower2, h, axis=0)
     else:
         totPower2 = data2D.sum() * (h[1] - h[0]) * (v[1] - v[0])
@@ -51,9 +56,9 @@ def integral_3d(data3D, e=None, h=None, v=None, method=0):
     if len(e.shape) == 1: # e is 1D: usual case
         if method == 0:
             try:
-                totPower2 = numpy.trapezoid(data3D, v, axis=2)
-                totPower2 = numpy.trapezoid(totPower2, h, axis=1)
-                totPower2 = numpy.trapezoid(totPower2, e, axis=0)
+                totPower2 = trapezoid(data3D, v, axis=2)
+                totPower2 = trapezoid(totPower2, h, axis=1)
+                totPower2 = trapezoid(totPower2, e, axis=0)
             except:
                 totPower2 = numpy.trapz(data3D, v, axis=2)
                 totPower2 = numpy.trapz(totPower2, h, axis=1)
@@ -63,8 +68,8 @@ def integral_3d(data3D, e=None, h=None, v=None, method=0):
     else: # e has the same dimension as data3D, calculation vs harmonics
         if method == 0:
 
-            totPower2 = numpy.trapezoid(data3D, v, axis=2)
-            totPower2 = numpy.trapezoid(totPower2, h, axis=1)
+            totPower2 = trapezoid(data3D, v, axis=2)
+            totPower2 = trapezoid(totPower2, h, axis=1)
             totPower2 = numpy.sum(totPower2)
 
         else:
@@ -600,7 +605,7 @@ def write_txt_file(calculated_data, input_beam_content, filename="tmp.txt", meth
     p_spectral_power = p * codata.e * 1e3
 
     absorbed3d = p_spectral_power * absorbance / (H[0] / h0[0]) / (V[0] / v0[0])
-    try:    absorbed2d = numpy.trapezoid(absorbed3d, E, axis=0)
+    try:    absorbed2d = trapezoid(absorbed3d, E, axis=0)
     except: absorbed2d = numpy.trapz(absorbed3d, E, axis=0)
 
     f = open(filename, 'w')
@@ -662,7 +667,7 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
                       title_1="X [mm] (normal to beam)",
                       title_2="Y [mm] (normal to beam)")
 
-        try:    h5w.add_image(numpy.trapezoid(p_spectral_power, E, axis=0) , H, V,
+        try:    h5w.add_image(trapezoid(p_spectral_power, E, axis=0) , H, V,
                       image_name="Power Density", entry_name=entry_name,
                       title_x="X [mm] (normal to beam)",
                       title_y="Y [mm] (normal to beam)")
@@ -671,7 +676,7 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
                       title_x="X [mm] (normal to beam)",
                       title_y="Y [mm] (normal to beam)")
 
-        try:    h5w.add_dataset(E, numpy.trapezoid(numpy.trapezoid(p_spectral_power, v, axis=2), h, axis=1),
+        try:    h5w.add_dataset(E, trapezoid(trapezoid(p_spectral_power, v, axis=2), h, axis=1),
                         entry_name=entry_name, dataset_name="Spectral power",
                         title_x="Photon Energy [eV]",
                         title_y="Spectral density [W/eV]")
@@ -697,7 +702,7 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
                       title_2="Y [mm] (o.e. coordinates)")
 
         absorbed = p_spectral_power * absorbance / (H[0] / h0[0]) / (V[0] / v0[0])
-        try:    h5w.add_image(numpy.trapezoid(absorbed, E, axis=0), H, V,
+        try:    h5w.add_image(trapezoid(absorbed, E, axis=0), H, V,
                       image_name="Absorbed Power Density on Element", entry_name=entry_name,
                       title_x="X [mm] (o.e. coordinates)",
                       title_y="Y [mm] (o.e. coordinates)")
@@ -705,7 +710,7 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
                       image_name="Absorbed Power Density on Element", entry_name=entry_name,
                       title_x="X [mm] (o.e. coordinates)",
                       title_y="Y [mm] (o.e. coordinates)")
-        try:    h5w.add_dataset(E, numpy.trapezoid(numpy.trapezoid(absorbed, v, axis=2), h, axis=1),
+        try:    h5w.add_dataset(E, trapezoid(trapezoid(absorbed, v, axis=2), h, axis=1),
                         entry_name=entry_name, dataset_name="Absorbed Spectral Power",
                         title_x="Photon Energy [eV]",
                         title_y="Spectral density [W/eV]")
@@ -724,7 +729,7 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
             v *= EL1_VMAG
 
         transmitted = p_spectral_power * transmittance / (h[0] / h0[0]) / (v[0] / v0[0])
-        try:    h5w.add_image(numpy.trapezoid(transmitted, E, axis=0), h, v,
+        try:    h5w.add_image(trapezoid(transmitted, E, axis=0), h, v,
                       image_name="Transmitted Power Density on Element", entry_name=entry_name,
                       title_x="X [mm] (normal to beam)",
                       title_y="Y [mm] (normal to beam)")
@@ -733,7 +738,7 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
                       title_x="X [mm] (normal to beam)",
                       title_y="Y [mm] (normal to beam)")
 
-        try:    h5w.add_dataset(E, numpy.trapezoid(numpy.trapezoid(transmitted, v, axis=2), h, axis=1),
+        try:    h5w.add_dataset(E, trapezoid(trapezoid(transmitted, v, axis=2), h, axis=1),
                         entry_name=entry_name, dataset_name="Transmitted Spectral Power",
                         title_x="Photon Energy [eV]",
                         title_y="Spectral density [W/eV]")
@@ -860,7 +865,7 @@ if __name__ == "__main__":
                        title="Transmitted Spectral Power Density [W/eV/mm2] at E=%g eV" % (100.0), xtitle="H [mm]",
                        ytitle="V [mm]", aspect='auto')
 
-            power_density_transmitted = numpy.trapezoid(spectral_power_transmitted, e, axis=0)
+            power_density_transmitted = trapezoid(spectral_power_transmitted, e, axis=0)
             power_density_integral = integral_2d(power_density_transmitted, h, v)
             plot_image(power_density_transmitted, h, v,
                        xtitle='H [mm] (normal to beam)',
@@ -875,7 +880,7 @@ if __name__ == "__main__":
                        title="Absorbed Spectral Power Density [W/eV/mm2] at E=%g eV" % (100.0), xtitle="H [mm]",
                        ytitle="V [mm]", aspect='auto')
 
-            power_density_absorbed = numpy.trapezoid(spectral_power_density_absorbed, E, axis=0)
+            power_density_absorbed = trapezoid(spectral_power_density_absorbed, E, axis=0)
             power_density_integral = integral_2d(power_density_absorbed, H, V)
             plot_image(power_density_absorbed, H, V,
                        xtitle='H [mm] (o.e. coordinates)',
@@ -1044,7 +1049,7 @@ if __name__ == "__main__":
         #                title="Transmitted Spectral Power Density [W/eV/mm2] at lower energy", xtitle="H [mm]",
         #                ytitle="V [mm]", aspect='auto')
         #
-        #     power_density_transmitted = numpy.trapezoid(spectral_power_transmitted, e, axis=0)
+        #     power_density_transmitted = trapezoid(spectral_power_transmitted, e, axis=0)
         #     power_density_integral = integral_2d(power_density_transmitted, h, v)
         #     plot_image(power_density_transmitted, h, v,
         #                xtitle='H [mm] (normal to beam)',
@@ -1059,7 +1064,7 @@ if __name__ == "__main__":
         #                title="Absorbed Spectral Power Density [W/eV/mm2] at lower energy", xtitle="H [mm]",
         #                ytitle="V [mm]", aspect='auto')
         #
-        #     power_density_absorbed = numpy.trapezoid(spectral_power_density_absorbed, E, axis=0)
+        #     power_density_absorbed = trapezoid(spectral_power_density_absorbed, E, axis=0)
         #     power_density_integral = integral_2d(power_density_absorbed, H, V)
         #     plot_image(power_density_absorbed, H, V,
         #                xtitle='H [mm] (o.e. coordinates)',

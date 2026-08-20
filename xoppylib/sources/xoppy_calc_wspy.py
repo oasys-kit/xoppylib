@@ -23,6 +23,11 @@
 #   over the (theta, psi) grid (exploiting 4-fold symmetry when centered).
 #
 import numpy
+
+try:
+    from numpy import trapezoid
+except ImportError:
+    from numpy import trapz as trapezoid  # numpy < 2.0 has no numpy.trapezoid
 import scipy
 
 def xoppy_calc_wspy(
@@ -176,8 +181,8 @@ def xoppy_calc_wspy(
     we = numpy.ones(NEE); we[0] = we[-1] = 0.5
     # tot_flux  = numpy.sum(we * flux / e) / BW * estep        # [ph/s]
     # tot_power = numpy.sum(we * spectral_power) * estep       # [W]
-    tot_flux  = numpy.trapezoid(we * flux / BW / e, e)   # [ph/s]
-    tot_power = numpy.trapezoid(we * spectral_power, e)  # [W]
+    tot_flux  = trapezoid(we * flux / BW / e, e)   # [ph/s]
+    tot_power = trapezoid(we * spectral_power, e)  # [W]
 
     if verbose:
         print("Inside xoppy_calc_wspy. ")
