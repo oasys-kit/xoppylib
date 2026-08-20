@@ -45,7 +45,10 @@ References:
 """
 import numpy
 import numpy as np
-from scipy.integrate import trapezoid
+try:
+    from numpy import trapezoid
+except ImportError:
+    from numpy import trapz as trapezoid  # numpy < 2.0 has no numpy.trapezoid
 import scipy.constants as codata
 import os
 from scipy.ndimage import gaussian_filter
@@ -474,7 +477,10 @@ if __name__ == "__main__":
         h1, v1, m1 = calc2d_kim(bl, zero_emittance=False)
 
         # cross-check the zero-emittance total against get_id_power_on_slit
-        from scipy.integrate import trapezoid
+        try:
+            from numpy import trapezoid
+        except ImportError:
+            from numpy import trapz as trapezoid  # numpy < 2.0 has no numpy.trapezoid
         P_ref = id_power_on_slit(K=bl['Kv'], period_m=bl['PeriodID'],
                                      n_periods=bl['NPeriods'],
                                      energy_GeV=bl['ElectronEnergy'],
