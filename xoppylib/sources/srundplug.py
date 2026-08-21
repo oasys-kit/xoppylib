@@ -3251,21 +3251,26 @@ def tuning_curves_on_slit(bl, Kmin=0.2, Kmax=2.2, Kpoints=10, harmonics=[1], zer
         for ih in range(len(harmonics)):
             harmonic = float(harmonics[ih])
 
+            # the red shift over the slit acceptance is the same in relative terms for all
+            # harmonics, therefore in absolute terms it scales as the harmonic number:
+            # DE_n = n * DE_1 (energy1delta holds DE_1).
+            photon_energy_min = harmonic * energy1[ik] - harmonic * energy1delta[ik]
+
             if code == "srw":
                 e_s, f_s = calc1d_srw(bl,
-                                      photonEnergyMin=(harmonic * energy1[ik] - (1.0 / harmonic) * energy1delta[ik]),
+                                      photonEnergyMin=photon_energy_min,
                                       photonEnergyMax=harmonic * energy1[ik],
                                       photonEnergyPoints=100, zero_emittance=zero_emittance, fileName=None,
                                       fileAppend=False)
             elif code == "us":
                 e_s, f_s = calc1d_us(bl,
-                                     photonEnergyMin=(harmonic * energy1[ik] - (1.0 / harmonic) * energy1delta[ik]),
+                                     photonEnergyMin=photon_energy_min,
                                      photonEnergyMax=harmonic * energy1[ik],
                                      photonEnergyPoints=100, zero_emittance=zero_emittance, fileName=None,
                                      fileAppend=False)
             elif code == "urgent":
                 e_s, f_s = calc1d_urgent(bl,
-                                         photonEnergyMin=(harmonic * energy1[ik] - (1.0 / harmonic) * energy1delta[ik]),
+                                         photonEnergyMin=photon_energy_min,
                                          photonEnergyMax=harmonic * energy1[ik],
                                          photonEnergyPoints=100, zero_emittance=zero_emittance, fileName=None,
                                          fileAppend=False)
