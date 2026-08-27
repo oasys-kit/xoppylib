@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xoppylib"
-version = "1.0.58"
+version = "1.0.59"
 description = "XOPPY library"
 readme = "README.rst"
 license = "MIT"
