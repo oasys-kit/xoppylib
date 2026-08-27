@@ -607,21 +607,22 @@ def write_txt_file(calculated_data, input_beam_content, filename="tmp.txt", meth
     absorbed3d = p_spectral_power * absorbance / (H[0] / h0[0]) / (V[0] / v0[0])
     absorbed2d = stack_to_power_density(absorbed3d, e0)
 
+    # coordinates in mm and absorbed power density in W/mm2 (as in the plots and in the h5 file)
     f = open(filename, 'w')
     if method == "3columns":
         for i in range(H.size):
             for j in range(V.size):
-                f.write("%g  %g  %g\n" % (H[i]*1e-3, V[i]*1e-3, absorbed2d[i,j]*1e6))
+                f.write("%g  %g  %g\n" % (H[i], V[j], absorbed2d[i,j]))
     elif method == "matrix":
         f.write("%10.5g" % 0)
         for i in range(H.size):
-            f.write(", %10.5g" % (H[i] * 1e-3))
+            f.write(", %10.5g" % (H[i]))
         f.write("\n")
 
         for j in range(V.size):
-                f.write("%10.5g" % (V[j] * 1e-3))
+                f.write("%10.5g" % (V[j]))
                 for i in range(H.size):
-                    f.write(", %10.5g" % (absorbed2d[i,j] * 1e6))
+                    f.write(", %10.5g" % (absorbed2d[i,j]))
                 f.write("\n")
     else:
         raise Exception("File type not understood.")
