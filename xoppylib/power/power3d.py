@@ -582,7 +582,7 @@ def write_radiation_to_h5file(e,h,v,p,
     else:
         h5w = H5SimpleWriter(h5_file,None)
     h5w.create_entry(h5_entry_name,nx_default=None)
-    h5w.add_stack(e,h,v,p,stack_name="Radiation",entry_name=h5_entry_name,
+    h5w.add_stack(stack_energy_axis(e),h,v,p,stack_name="Radiation",entry_name=h5_entry_name,
         title_0="Photon energy [eV]",
         title_1="X gap [mm]",
         title_2="Y gap [mm]")
@@ -605,8 +605,7 @@ def write_txt_file(calculated_data, input_beam_content, filename="tmp.txt", meth
     p_spectral_power = p * codata.e * 1e3
 
     absorbed3d = p_spectral_power * absorbance / (H[0] / h0[0]) / (V[0] / v0[0])
-    try:    absorbed2d = trapezoid(absorbed3d, E, axis=0)
-    except: absorbed2d = numpy.trapz(absorbed3d, E, axis=0)
+    absorbed2d = stack_to_power_density(absorbed3d, e0)
 
     f = open(filename, 'w')
     if method == "3columns":
@@ -631,6 +630,40 @@ def write_txt_file(calculated_data, input_beam_content, filename="tmp.txt", meth
     print("File written to disk: %s" % filename)
 
 
+def stack_energy_axis(e):
+    """Returns the 1D photon energy axis of a radiation stack.
+
+    For the usual calculation vs photon energy, e is already 1D. For the calculation vs harmonics,
+    e has the same dimension as the stack (one photon energy per harmonic and per pixel) and the
+    on-axis energy of each harmonic is used (as done in the power3Dcomponent plots)."""
+    if e.ndim == 1: return e
+    return e[:, e.shape[1] // 2, e.shape[2] // 2].copy()
+
+
+def stack_to_power_density(data3D, e):
+    """Integrates a spectral power density stack [W/eV/mm2] over the photon energy to get [W/mm2].
+
+    For the calculation vs harmonics (e with the same dimension as the stack) the stack contains
+    the power density of each harmonic [W/mm2], therefore the harmonics are added instead."""
+    if e.ndim == 1: return trapezoid(data3D, e, axis=0)
+    return numpy.sum(data3D, axis=0)
+
+
+def stack_to_spectral_power(data3D, e, h, v, photon_energy_bin=100.0):
+    """Integrates a spectral power density stack [W/eV/mm2] over the aperture to get [W/eV] vs energy.
+
+    For the calculation vs harmonics (e with the same dimension as the stack) the power of each
+    harmonic and pixel is histogrammed in photon energy bins of photon_energy_bin [eV]
+    (as done in the power3Dcomponent plots). Returns (photon energy array, spectral power array)."""
+    if e.ndim == 1:
+        return e, trapezoid(trapezoid(data3D, v, axis=2), h, axis=1)
+
+    weights = data3D.flatten() * (h[1] - h[0]) * (v[1] - v[0])
+    e_bins = numpy.arange(e.min(), e.max() + photon_energy_bin, photon_energy_bin)
+    spectral_power, bin_edges = numpy.histogram(e.flatten(), bins=e_bins, weights=weights)
+    return 0.5 * (bin_edges[:-1] + bin_edges[1:]), spectral_power / photon_energy_bin
+
+
 def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FLAG=1,EL1_HMAG=1.0,EL1_VMAG=1.0):
 
     p0, e0, h0, v0 = input_beam_content #.get_content("xoppy_data")
@@ -644,6 +677,11 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
     h = h0.copy()
     v = v0.copy()
     p_spectral_power = p * codata.e * 1e3
+
+    # the calculation vs harmonics (e0 with the same dimension as the stack) needs a different
+    # treatment than the usual calculation vs photon energy (e0 is 1D)
+    e_axis = stack_energy_axis(e)
+    E_axis = stack_energy_axis(numpy.asarray(E))
 
     try:
         h5w = H5SimpleWriter.initialize_file(filename, creator="power3Dcomponent.py")
@@ -662,25 +700,18 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
 
         h5w.create_entry(entry_name, nx_default=None)
 
-        h5w.add_stack(e, h, v, p, stack_name="Radiation stack", entry_name=entry_name,
+        h5w.add_stack(e_axis, h, v, p, stack_name="Radiation stack", entry_name=entry_name,
                       title_0="Photon energy [eV]",
                       title_1="X [mm] (normal to beam)",
                       title_2="Y [mm] (normal to beam)")
 
-        try:    h5w.add_image(trapezoid(p_spectral_power, E, axis=0) , H, V,
-                      image_name="Power Density", entry_name=entry_name,
-                      title_x="X [mm] (normal to beam)",
-                      title_y="Y [mm] (normal to beam)")
-        except: h5w.add_image(numpy.trapz(p_spectral_power, E, axis=0) , H, V,
+        h5w.add_image(stack_to_power_density(p_spectral_power, e), H, V,
                       image_name="Power Density", entry_name=entry_name,
                       title_x="X [mm] (normal to beam)",
                       title_y="Y [mm] (normal to beam)")
 
-        try:    h5w.add_dataset(E, trapezoid(trapezoid(p_spectral_power, v, axis=2), h, axis=1),
-                        entry_name=entry_name, dataset_name="Spectral power",
-                        title_x="Photon Energy [eV]",
-                        title_y="Spectral density [W/eV]")
-        except: h5w.add_dataset(E, numpy.trapz(numpy.trapz(p_spectral_power, v, axis=2), h, axis=1),
+        e_spectral_power, spectral_power = stack_to_spectral_power(p_spectral_power, e, h, v)
+        h5w.add_dataset(e_spectral_power, spectral_power,
                         entry_name=entry_name, dataset_name="Spectral power",
                         title_x="Photon Energy [eV]",
                         title_y="Spectral density [W/eV]")
@@ -696,25 +727,19 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
 
         h5w.create_entry(entry_name, nx_default=None)
 
-        h5w.add_stack(E, H, V, transmittance, stack_name="Transmittance stack", entry_name=entry_name,
+        h5w.add_stack(E_axis, H, V, transmittance, stack_name="Transmittance stack", entry_name=entry_name,
                       title_0="Photon energy [eV]",
                       title_1="X [mm] (o.e. coordinates)",
                       title_2="Y [mm] (o.e. coordinates)")
 
         absorbed = p_spectral_power * absorbance / (H[0] / h0[0]) / (V[0] / v0[0])
-        try:    h5w.add_image(trapezoid(absorbed, E, axis=0), H, V,
+        h5w.add_image(stack_to_power_density(absorbed, e), H, V,
                       image_name="Absorbed Power Density on Element", entry_name=entry_name,
                       title_x="X [mm] (o.e. coordinates)",
                       title_y="Y [mm] (o.e. coordinates)")
-        except: h5w.add_image(numpy.trapz(absorbed, E, axis=0), H, V,
-                      image_name="Absorbed Power Density on Element", entry_name=entry_name,
-                      title_x="X [mm] (o.e. coordinates)",
-                      title_y="Y [mm] (o.e. coordinates)")
-        try:    h5w.add_dataset(E, trapezoid(trapezoid(absorbed, v, axis=2), h, axis=1),
-                        entry_name=entry_name, dataset_name="Absorbed Spectral Power",
-                        title_x="Photon Energy [eV]",
-                        title_y="Spectral density [W/eV]")
-        except: h5w.add_dataset(E, numpy.trapz(numpy.trapz(absorbed, v, axis=2), h, axis=1),
+
+        e_absorbed, absorbed_spectral_power = stack_to_spectral_power(absorbed, e, h, v)
+        h5w.add_dataset(e_absorbed, absorbed_spectral_power,
                         entry_name=entry_name, dataset_name="Absorbed Spectral Power",
                         title_x="Photon Energy [eV]",
                         title_y="Spectral density [W/eV]")
@@ -729,20 +754,13 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
             v *= EL1_VMAG
 
         transmitted = p_spectral_power * transmittance / (h[0] / h0[0]) / (v[0] / v0[0])
-        try:    h5w.add_image(trapezoid(transmitted, E, axis=0), h, v,
-                      image_name="Transmitted Power Density on Element", entry_name=entry_name,
-                      title_x="X [mm] (normal to beam)",
-                      title_y="Y [mm] (normal to beam)")
-        except: h5w.add_image(numpy.trapz(transmitted, E, axis=0), h, v,
+        h5w.add_image(stack_to_power_density(transmitted, e), h, v,
                       image_name="Transmitted Power Density on Element", entry_name=entry_name,
                       title_x="X [mm] (normal to beam)",
                       title_y="Y [mm] (normal to beam)")
 
-        try:    h5w.add_dataset(E, trapezoid(trapezoid(transmitted, v, axis=2), h, axis=1),
-                        entry_name=entry_name, dataset_name="Transmitted Spectral Power",
-                        title_x="Photon Energy [eV]",
-                        title_y="Spectral density [W/eV]")
-        except: h5w.add_dataset(E, numpy.trapz(numpy.trapz(transmitted, v, axis=2), h, axis=1),
+        e_transmitted, transmitted_spectral_power = stack_to_spectral_power(transmitted, e, h, v)
+        h5w.add_dataset(e_transmitted, transmitted_spectral_power,
                         entry_name=entry_name, dataset_name="Transmitted Spectral Power",
                         title_x="Photon Energy [eV]",
                         title_y="Spectral density [W/eV]")
@@ -753,7 +771,7 @@ def write_h5_file(calculated_data, input_beam_content, filename="tmp.txt",EL1_FL
         h5_entry_name = "XOPPY_RADIATION"
 
         h5w.create_entry(h5_entry_name,nx_default=None)
-        h5w.add_stack(e, h, v, transmitted,stack_name="Radiation",entry_name=h5_entry_name,
+        h5w.add_stack(e_axis, h, v, transmitted,stack_name="Radiation",entry_name=h5_entry_name,
             title_0="Photon energy [eV]",
             title_1="X gap [mm]",
             title_2="Y gap [mm]")
