@@ -593,7 +593,9 @@ def write_radiation_to_h5file(e,h,v,p,
     print("File written to disk: %s"%h5_file)
 
 
-def write_txt_file(calculated_data, input_beam_content, filename="tmp.txt", method="3columns"):
+def write_txt_file(calculated_data, input_beam_content, filename="tmp.txt", method="3columns",
+                   quantity="absorbed", # "absorbed" or "transmitted"
+                   ):
 
     p0, e0, h0, v0 = input_beam_content # .get_content("xoppy_data")
     transmittance, absorbance, E, H, V = calculated_data
@@ -604,31 +606,43 @@ def write_txt_file(calculated_data, input_beam_content, filename="tmp.txt", meth
     p = p0.copy()
     p_spectral_power = p * codata.e * 1e3
 
-    absorbed3d = p_spectral_power * absorbance / (H[0] / h0[0]) / (V[0] / v0[0])
-    absorbed2d = stack_to_power_density(absorbed3d, e0)
+    if quantity == "absorbed":
+        # in the optical element coordinates
+        power_density3d = p_spectral_power * absorbance / (H[0] / h0[0]) / (V[0] / v0[0])
+        x = H
+        y = V
+    elif quantity == "transmitted":
+        # in the coordinates normal to the beam
+        power_density3d = p_spectral_power * transmittance
+        x = h0
+        y = v0
+    else:
+        raise Exception("Quantity not understood (use 'absorbed' or 'transmitted').")
 
-    # coordinates in mm and absorbed power density in W/mm2 (as in the plots and in the h5 file)
+    power_density2d = stack_to_power_density(power_density3d, e0)
+
+    # coordinates in mm and power density in W/mm2 (as in the plots and in the h5 file)
     f = open(filename, 'w')
     if method == "3columns":
-        for i in range(H.size):
-            for j in range(V.size):
-                f.write("%g  %g  %g\n" % (H[i], V[j], absorbed2d[i,j]))
+        for i in range(x.size):
+            for j in range(y.size):
+                f.write("%g  %g  %g\n" % (x[i], y[j], power_density2d[i,j]))
     elif method == "matrix":
         f.write("%10.5g" % 0)
-        for i in range(H.size):
-            f.write(", %10.5g" % (H[i]))
+        for i in range(x.size):
+            f.write(", %10.5g" % (x[i]))
         f.write("\n")
 
-        for j in range(V.size):
-                f.write("%10.5g" % (V[j]))
-                for i in range(H.size):
-                    f.write(", %10.5g" % (absorbed2d[i,j]))
+        for j in range(y.size):
+                f.write("%10.5g" % (y[j]))
+                for i in range(x.size):
+                    f.write(", %10.5g" % (power_density2d[i,j]))
                 f.write("\n")
     else:
         raise Exception("File type not understood.")
     f.close()
 
-    print("File written to disk: %s" % filename)
+    print("File written to disk: %s (%s power density)" % (filename, quantity))
 
 
 def stack_energy_axis(e):
