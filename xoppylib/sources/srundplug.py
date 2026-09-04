@@ -239,9 +239,9 @@ def calc1d_pysru(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0, photonEner
         f.write(header)
 
         for i in range(eArray.size):
-            f.write(' ' + repr(eArray[i]) + '   ' + repr(m2ev / eArray[i] * 1e10) + '    ' +
-                    repr(intensArray[i]) + '    ' +
-                    repr(intensArray[i] * codata.e * 1e3) + '\n')
+            f.write(' ' + repr(float(eArray[i])) + '   ' + repr(float(m2ev / eArray[i] * 1e10)) + '    ' +
+                    repr(float(intensArray[i])) + '    ' +
+                    repr(float(intensArray[i] * codata.e * 1e3)) + '\n')
         f.close()
 
         if fileAppend:
@@ -422,9 +422,9 @@ def calc1d_srw(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0, photonEnergy
     intensArray = numpy.zeros(photonEnergyPoints)
     for i in range(stkF.mesh.ne):
         ener = stkF.mesh.eStart + i * (stkF.mesh.eFin - stkF.mesh.eStart) / numpy.array((stkF.mesh.ne - 1)).clip(min=1)
-        if fileName is not None: f.write(' ' + repr(ener) + '   ' + repr(m2ev / ener * 1e10) + '    ' +
-                                         repr(stkF.arS[i]) + '    ' +
-                                         repr(stkF.arS[i] * codata.e * 1e3) + '\n')
+        if fileName is not None: f.write(' ' + repr(float(ener)) + '   ' + repr(float(m2ev / ener * 1e10)) + '    ' +
+                                         repr(float(stkF.arS[i])) + '    ' +
+                                         repr(float(stkF.arS[i] * codata.e * 1e3)) + '\n')
         eArray[i] = ener
         intensArray[i] = stkF.arS[i]
 
@@ -608,9 +608,9 @@ def calc1d_srw_on_axis(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0, phot
 
     eArray = numpy.linspace(photonEnergyMin, photonEnergyMax, photonEnergyPoints)
     for i in range(wfr.mesh.ne):
-        if fileName is not None: f.write(' ' + repr(eArray[i]) + '   ' + repr(m2ev / eArray[i] * 1e10) + '    ' +
-                                         repr(arI1[i]) + '    ' +
-                                         repr(arI1[i] * codata.e * 1e3) + '\n')
+        if fileName is not None: f.write(' ' + repr(float(eArray[i])) + '   ' + repr(float(m2ev / eArray[i] * 1e10)) + '    ' +
+                                         repr(float(arI1[i])) + '    ' +
+                                         repr(float(arI1[i] * codata.e * 1e3)) + '\n')
 
     if fileName is not None:
         f.close()
@@ -808,9 +808,9 @@ def calc1d_srw_parallel(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0, pho
         f.write(header)
 
     for i in range(len(eArray)):
-        if fileName is not None: f.write(' ' + repr(eArray[i]) + '   ' + repr(m2ev / eArray[i] * 1e10) + '    ' +
-                                         repr(intensArray[i]) + '    ' +
-                                         repr(intensArray[i] * codata.e * 1e3) + '\n')
+        if fileName is not None: f.write(' ' + repr(float(eArray[i])) + '   ' + repr(float(m2ev / eArray[i] * 1e10)) + '    ' +
+                                         repr(float(intensArray[i])) + '    ' +
+                                         repr(float(intensArray[i] * codata.e * 1e3)) + '\n')
 
     if fileName is not None:
         f.close()
@@ -992,9 +992,9 @@ def calc1d_srw_step_by_step(bl, photonEnergyMin=3000.0, photonEnergyMax=55000.0,
         f.write(header)
 
     for i in range(len(eArray)):
-        if fileName is not None: f.write(' ' + repr(eArray[i]) + '   ' + repr(m2ev / eArray[i] * 1e10) + '    ' +
-                                         repr(intensArray[i]) + '    ' +
-                                         repr(intensArray[i] * codata.e * 1e3) + '\n')
+        if fileName is not None: f.write(' ' + repr(float(eArray[i])) + '   ' + repr(float(m2ev / eArray[i] * 1e10)) + '    ' +
+                                         repr(float(intensArray[i])) + '    ' +
+                                         repr(float(intensArray[i] * codata.e * 1e3)) + '\n')
 
     if fileName is not None:
         f.close()
@@ -1414,7 +1414,7 @@ def calc2d_srw(bl, zero_emittance=False, hSlitPoints=101, vSlitPoints=51,
         f.write("\n#S %d Undulator power density calculation using SRW\n" % (scanCounter))
         for i, j in bl.items():  # write bl values
             f.write("#UD %s = %s\n" % (i, j))
-        f.write('\n#U B0 = ' + repr(B0) + '\n')
+        f.write('\n#U B0 = ' + repr(float(B0)) + '\n')
         f.write('\n#U hSlitPoints = ' + repr(hSlitPoints) + '\n')
         f.write('\n#U vSlitPoints = ' + repr(vSlitPoints) + '\n')
         f.write("#N 3 \n#L H[mm]  V[mm]  PowerDensity[W/mm^2] \n")
@@ -1444,7 +1444,7 @@ def calc2d_srw(bl, zero_emittance=False, hSlitPoints=101, vSlitPoints=51,
     if fileName is not None:
         for i in range(stkP.mesh.nx):
             for j in range(stkP.mesh.ny):
-                f.write(repr(hArray[i]) + ' ' + repr(vArray[j]) + ' ' + repr(powerArray[i, j]) + '\n')
+                f.write(repr(float(hArray[i])) + ' ' + repr(float(vArray[j])) + ' ' + repr(float(powerArray[i, j])) + '\n')
 
     totPower = totPower * \
                (stkP.mesh.xFin - stkP.mesh.xStart) / (stkP.mesh.nx - 1) * 1e3 * \
@@ -1458,28 +1458,28 @@ def calc2d_srw(bl, zero_emittance=False, hSlitPoints=101, vSlitPoints=51,
         f.write("\n#S %d Undulator power density calculation using SRW: H profile\n" % (scanCounter))
         for i, j in bl.items():  # write bl values
             f.write("#UD %s = %s\n" % (i, j))
-        f.write("#UD Total power [W]: " + repr(totPower) + "\n")
-        f.write("#UD FWHM [mm] : " + repr(calc_fwhm(hProfile, hStep)[0] * 1e3) + "\n")
+        f.write("#UD Total power [W]: " + repr(float(totPower)) + "\n")
+        f.write("#UD FWHM [mm] : " + repr(float(calc_fwhm(hProfile, hStep)[0] * 1e3)) + "\n")
         f.write("#N 2 \n")
         f.write("#L H[mm]  PowerDensityCentralProfile[W/mm2] \n")
         for i in range(stkP.mesh.nx):
             # xx = stkP.mesh.xStart + i*hStep
             # f.write(repr(xx*1e3) + ' ' + repr(hProfile[i]) + '\n')
-            f.write(repr(hArray[i]) + ' ' + \
-                    repr(powerArray[i, int(len(vArray) / 2)]) + '\n')
+            f.write(repr(float(hArray[i])) + ' ' + \
+                    repr(float(powerArray[i, int(len(vArray) / 2)])) + '\n')
 
         scanCounter += 1
         vStep = (stkP.mesh.yFin - stkP.mesh.yStart) / (stkP.mesh.ny - 1)
         f.write("\n#S %d Undulator power density calculation using SRW: V profile\n" % (scanCounter))
         for i, j in bl.items():  # write bl values
             f.write("#UD %s = %s\n" % (i, j))
-        f.write("#UD Total power [W]: " + repr(totPower) + "\n")
-        f.write("#UD FWHM [mm] : " + repr(calc_fwhm(vProfile, vStep)[0] * 1e3) + "\n")
+        f.write("#UD Total power [W]: " + repr(float(totPower)) + "\n")
+        f.write("#UD FWHM [mm] : " + repr(float(calc_fwhm(vProfile, vStep)[0] * 1e3)) + "\n")
         f.write("#N 2 \n")
         f.write("#L V[mm]  PowerDensityCentralProfile[W/mm2] \n")
         for j in range(stkP.mesh.ny):
-            f.write(repr(vArray[j]) + ' ' + \
-                    repr(powerArray[int(len(hArray) / 2), j]) + '\n')
+            f.write(repr(float(vArray[j])) + ' ' + \
+                    repr(float(powerArray[int(len(hArray) / 2), j])) + '\n')
 
         f.close()
 
@@ -1488,8 +1488,8 @@ def calc2d_srw(bl, zero_emittance=False, hSlitPoints=101, vSlitPoints=51,
         else:
             print("File written to disk: %s" % (os.path.join(os.getcwd(), fileName)))
 
-    print("Power density peak SRW: [W/mm2]: " + repr(powerArray.max()))
-    print("Total power SRW [W]: " + repr(totPower))
+    print("Power density peak SRW: [W/mm2]: " + repr(float(powerArray.max())))
+    print("Total power SRW [W]: " + repr(float(totPower)))
 
     return (hArray, vArray, powerArray)
 
@@ -1606,7 +1606,7 @@ def calc2d_us(bl, zero_emittance=False, hSlitPoints=51, vSlitPoints=51, fileName
         f.write("#L  H[mm]  V[mm]  PowerDensity[W/mm^2]\n")
         for i in range(len(hhh)):
             for j in range(len(vvv)):
-                f.write("%f  %f  %f\n" % (hhh[i], vvv[j], int_mesh2[i, j]))
+                f.write("%f  %f  %f\n" % (float(hhh[i]), float(vvv[j]), float(int_mesh2[i, j])))
 
     totPower = int_mesh2.sum() * (hh[1] - hh[0]) * (vv[1] - vv[0])
 
@@ -1617,7 +1617,7 @@ def calc2d_us(bl, zero_emittance=False, hSlitPoints=51, vSlitPoints=51, fileName
             f.write("#UD %s = %s\n" % (i, j))
         f.write("#UD hSlitPoints =  %f\n" % (hSlitPoints))
         f.write("#UD vSlitPoints =  %f\n" % (vSlitPoints))
-        f.write("#UD Total power [W]: " + repr(totPower) + "\n")
+        f.write("#UD Total power [W]: " + repr(float(totPower)) + "\n")
         f.write("#N 2\n")
         f.write("#L  H[mm]  PowerDensity[W/mm2]\n")
         for i in range(len(hhh)):
@@ -1629,7 +1629,7 @@ def calc2d_us(bl, zero_emittance=False, hSlitPoints=51, vSlitPoints=51, fileName
             f.write("#UD %s = %s\n" % (i, j))
         f.write("#UD hSlitPoints =  %f\n" % (hSlitPoints))
         f.write("#UD vSlitPoints =  %f\n" % (vSlitPoints))
-        f.write("#UD Total power [W]: " + repr(totPower) + "\n")
+        f.write("#UD Total power [W]: " + repr(float(totPower)) + "\n")
         f.write("#N 2\n")
         f.write("#L  V[mm]  PowerDensity[W/mm2]\n")
         for i in range(len(vvv)):
@@ -1642,8 +1642,8 @@ def calc2d_us(bl, zero_emittance=False, hSlitPoints=51, vSlitPoints=51, fileName
         else:
             print("File written to disk: %s" % (os.path.join(os.getcwd(), fileName)))
 
-    print("Power density peak US: [W/mm2]: " + repr(int_mesh2.max()))
-    print("Total power US [W]: " + repr(totPower))
+    print("Power density peak US: [W/mm2]: " + repr(float(int_mesh2.max())))
+    print("Total power US [W]: " + repr(float(totPower)))
     return (hhh, vvv, int_mesh2)
 
 
@@ -1796,7 +1796,7 @@ def calc2d_urgent(bl, zero_emittance=False, fileName=None, fileAppend=False, hSl
             f.write("#UD %s = %s\n" % (i, j))
         f.write("#UD hSlitPoints =  %f\n" % (hSlitPoints))
         f.write("#UD vSlitPoints =  %f\n" % (vSlitPoints))
-        f.write("#UD Total power [W]: " + repr(totPower) + "\n")
+        f.write("#UD Total power [W]: " + repr(float(totPower)) + "\n")
         f.write("#N 2\n")
         f.write("#L  H[mm]  PowerDensity[W/mm2]\n")
         for i in range(len(hhh)):
@@ -1808,7 +1808,7 @@ def calc2d_urgent(bl, zero_emittance=False, fileName=None, fileAppend=False, hSl
             f.write("#UD %s = %s\n" % (i, j))
         f.write("#UD hSlitPoints =  %f\n" % (hSlitPoints))
         f.write("#UD vSlitPoints =  %f\n" % (vSlitPoints))
-        f.write("#UD Total power [W]: " + repr(totPower) + "\n")
+        f.write("#UD Total power [W]: " + repr(float(totPower)) + "\n")
         f.write("#N 2\n")
         f.write("#L  V[mm]  PowerDensity[W/mm2]\n")
         for i in range(len(vvv)):
@@ -1821,7 +1821,7 @@ def calc2d_urgent(bl, zero_emittance=False, fileName=None, fileAppend=False, hSl
         else:
             print("File written to disk: %s" % (os.path.join(os.getcwd(), fileName)))
 
-    print("Power density peak URGENT: [W/mm2]: " + repr(int_mesh2.max()))
+    print("Power density peak URGENT: [W/mm2]: " + repr(float(int_mesh2.max())))
     print("Total power URGENT [W]: " + repr(totPower))
     print("\n--------------------------------------------------------\n\n")
 
