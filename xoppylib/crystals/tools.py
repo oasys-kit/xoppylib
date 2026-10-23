@@ -390,6 +390,9 @@ def crystal_fh(input_dictionary, phot_in, theta=None, forceratio=0):
     -------
     dict
         a dictionary with structure factor.
+        Note that psi_0, psi_h and psi_hbar are + r_e lambda^2 F / (pi V), i.e., the
+        opposite sign of the susceptibilities chi_0, chi_h, chi_hbar (with Re chi_0 < 0).
+        F uses exp(+2 pi i H.r) and f = f0 + f' + i|f''|, so Im chi_0 < 0.
 
     """
     rn        = input_dictionary["rn"]
@@ -500,6 +503,8 @@ def crystal_fh(input_dictionary, phot_in, theta=None, forceratio=0):
         # ;C   PSI_CONJ = F*( note: PSI_HBAR is PSI at -H position and is
         # ;C   proportional to fh_bar but PSI_CONJ is complex conjugate os PSI_H)
         # ;C
+        # note: psi = + r_e lambda^2 F / (pi V) = -chi, with chi the susceptibility
+        # (Re chi_0 < 0). Use -psi_0, -psi_h, -psi_hbar to get chi.
 
         psi_over_f = rn * r_lam0**2 / numpy.pi
         psi_h      = rn * r_lam0**2 / numpy.pi * FH
