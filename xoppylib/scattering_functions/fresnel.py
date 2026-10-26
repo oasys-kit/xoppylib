@@ -11,8 +11,10 @@ def reflectivity_fresnel(refraction_index_delta=1e-5,refraction_index_beta=0.0,\
 
     Code adapted from XOP and SHADOW
 
-    :param refraction_index_delta: scalar or array with delta (n=1-delta+i beta)
-    :param refraction_index_beta: scalar or array with beta (n=1-delta+i beta)
+    :param refraction_index_delta: scalar or array with delta (n=1-delta-i beta, beta>0)
+    :param refraction_index_beta: scalar or array with beta (n=1-delta-i beta, beta>0).
+        The reflectivities do not depend on the convention: with exp(-iwt), n=1-delta+i beta
+        with the same delta and beta.
     :param grazing_angle_mrad: scalar with grazing angle in mrad
     :param roughness_rms_A: scalar with roughness rms in Angstroms
     :param photon_energy_ev: scalar or array with photon energies in eV
@@ -58,8 +60,8 @@ def interface_reflectivity(alpha,gamma,theta1):
     Calculates the reflectivity of an interface using Fresnel formulas.
 
     Code adapted from XOP and SHADOW
-    :param alpha: the array with alpha values (alpha=2 delta, n=1-delta+i beta)
-    :param gamma: the array with gamma (gamma=2 beta)
+    :param alpha: the array with alpha values (alpha=2 delta, n=1-delta-i beta)
+    :param gamma: the array with gamma (gamma=2 beta, beta>0)
     :param theta1: a scalar with the grazing angle in rad
     :return:
     """
