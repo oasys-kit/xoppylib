@@ -390,9 +390,9 @@ def crystal_fh(input_dictionary, phot_in, theta=None, forceratio=0):
     -------
     dict
         a dictionary with structure factor.
-        Note that psi_0, psi_h and psi_hbar are + r_e lambda^2 F / (pi V), i.e., the
-        opposite sign of the susceptibilities chi_0, chi_h, chi_hbar (with Re chi_0 < 0).
-        F uses exp(+2 pi i H.r) and f = f0 + f' + i|f''|, so Im chi_0 < 0.
+        psi_0, psi_h and psi_hbar are the susceptibilities chi = - r_e lambda^2 F / (pi V)
+        (psi in Zachariasen's notation), with Re psi_0 < 0. F uses exp(+2 pi i H.r) and
+        f = f0 + f' + i|f''|, so Im psi_0 < 0.
 
     """
     rn        = input_dictionary["rn"]
@@ -503,18 +503,19 @@ def crystal_fh(input_dictionary, phot_in, theta=None, forceratio=0):
         # ;C   PSI_CONJ = F*( note: PSI_HBAR is PSI at -H position and is
         # ;C   proportional to fh_bar but PSI_CONJ is complex conjugate os PSI_H)
         # ;C
-        # note: psi = + r_e lambda^2 F / (pi V) = -chi, with chi the susceptibility
-        # (Re chi_0 < 0). Use -psi_0, -psi_h, -psi_hbar to get chi.
+        # note: psi = - r_e lambda^2 F / (pi V) = chi, the susceptibility (Re psi_0 < 0,
+        # Im psi_0 < 0), as in Zachariasen [3.95], diff_pat, inpro and crystalpy.
+        # (Until October 2026 psi was defined here with the opposite sign.)
 
-        psi_over_f = rn * r_lam0**2 / numpy.pi
-        psi_h      = rn * r_lam0**2 / numpy.pi * FH
-        psi_hr     = rn * r_lam0**2 / numpy.pi * FHr
-        psi_hi     = rn * r_lam0**2 / numpy.pi * FHi
-        psi_hbar   = rn * r_lam0**2 / numpy.pi * FH_BAR
-        psi_hbarr  = rn * r_lam0**2 / numpy.pi * FH_BARr
-        psi_hbari  = rn * r_lam0**2 / numpy.pi * FH_BARi
-        psi_0      = rn * r_lam0**2 / numpy.pi * F_0
-        psi_conj   = rn * r_lam0**2 / numpy.pi * FH.conjugate()
+        psi_over_f = -rn * r_lam0**2 / numpy.pi
+        psi_h      = psi_over_f * FH
+        psi_hr     = psi_over_f * FHr
+        psi_hi     = psi_over_f * FHi
+        psi_hbar   = psi_over_f * FH_BAR
+        psi_hbarr  = psi_over_f * FH_BARr
+        psi_hbari  = psi_over_f * FH_BARi
+        psi_0      = psi_over_f * F_0
+        psi_conj   = psi_over_f * FH.conjugate()
 
         # ;
         # ; Darwin width
@@ -572,7 +573,7 @@ def crystal_fh(input_dictionary, phot_in, theta=None, forceratio=0):
         txt += '\n Average Temperature factor = '             + repr(TEMPER_AVE)
         txt += '\n Refraction index = 1 - delta - i*beta'
         txt += '\n            delta = '                       + repr(DELTA_REF)
-        txt += '\n             beta = '                       + repr(1.0e0*REFRAC.imag)
+        txt += '\n             beta = '                       + repr(-1.0e0*REFRAC.imag)
         txt += '\n Absorption coeff = '                       + repr(ABSORP)+' cm^-1'
         txt += '\n  '
         txt += '\n e^2/(mc^2)/V = '                           + repr(rn)+' cm^-2'
